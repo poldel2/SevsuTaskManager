@@ -15,3 +15,4 @@ class User(Base):
     group = Column(String)
 
     projects = relationship("Project", back_populates="owner")
+    tasks = relationship("Task", back_populates="assignee")  # Добавляем связь с задачами

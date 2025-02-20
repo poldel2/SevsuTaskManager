@@ -12,6 +12,8 @@ oauth2_scheme = OAuth2AuthorizationCodeBearer(
     tokenUrl=settings.SEVSU_TOKEN_URL
 )
 
+class NewUser:
+    id: int
 
 async def get_current_user():
 #     token: str = Depends(oauth2_scheme),
@@ -39,6 +41,8 @@ async def get_current_user():
 #     if user is None:
 #         raise HTTPException(status_code=404, detail="User not found")
 #     return user
-      return 1
+      newUser = NewUser()
+      newUser.id = 1
+      return newUser
 
 

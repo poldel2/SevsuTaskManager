@@ -4,11 +4,13 @@ from alembic import context
 import asyncio
 
 # Импорт ваших моделей
-from models.domain.users import User  # Измените путь согласно вашей структуре
+from models.domain.users import User
 from models.domain.projects import Project
+from models.domain.sprints import Sprint
+from models.domain.tasks import Task
 
 config = context.config
-target_metadata = Project.metadata  # Или Base.metadata, если используете декларативную базу
+target_metadata = Task.metadata
 
 # Настройка логгирования
 if config.config_file_name is not None:

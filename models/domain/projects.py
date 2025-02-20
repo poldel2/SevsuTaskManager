@@ -15,3 +15,6 @@ class Project(Base):
     owner_id = Column(Integer, ForeignKey("users.id"), nullable=False)
     owner = relationship("User", back_populates="projects")
 
+    sprints = relationship("Sprint", back_populates="project")
+    tasks = relationship("Task", back_populates="project")
+

@@ -1,8 +1,8 @@
 from pydantic_settings import BaseSettings, SettingsConfigDict
 from pydantic import AnyUrl
+import os
 
 class Settings(BaseSettings):
-
     DATABASE_URL: str
     CALLBACK_URL: str
     SEVSU_CLIENT_ID: str
@@ -14,7 +14,8 @@ class Settings(BaseSettings):
     JWT_ALGORITHM: str = "HS256"
 
     model_config = SettingsConfigDict(
-        env_file=".env",
+        # Динамически выбираем .env-файл в зависимости от окружения
+        env_file=".env.test" if os.getenv("TESTING") else ".env",
         env_file_encoding="utf-8",
         extra="forbid"
     )

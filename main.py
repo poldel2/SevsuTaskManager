@@ -3,22 +3,23 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 import uvicorn
 
-from routers import auth
-from routers import projects
+from routers import router
+
+
 
 app = FastAPI()
 
-app.include_router(auth.router, prefix="/auth", tags=["auth"])
-app.include_router(projects.router, prefix="/project", tags=["auth"])
+app.include_router(router)
 
 
 
 app.add_middleware(
     CORSMiddleware,
     allow_origins=[
-        # "http://localhost:5173",
+        "http://localhost:5173",
+        "http://localhost:5174",
         # "http://31.129.43.117",
-        "https://site-test-deploy1.ru",
+        "http://sevsutasktracker.ru"
     ],
     allow_credentials=True,
     allow_methods=["*"],
