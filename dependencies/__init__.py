@@ -7,6 +7,8 @@ from repositories.user_repository import UserRepository
 from services.auth_service import AuthService
 from core.db import get_db
 from sqlalchemy.ext.asyncio import AsyncSession
+from repositories.message_repository import MessageRepository
+from services.message_service import MessageService
 
 from services.project_service import ProjectService
 from services.sprint_service import SprintService
@@ -39,3 +41,9 @@ def get_task_service(
     sprint_repo = SprintRepository(session)
     project_repo = ProjectRepository(session)
     return TaskService(task_repo, project_repo, sprint_repo)
+
+
+def get_message_service(session: AsyncSession = Depends(get_db)):
+    message_repo = MessageRepository(session)
+    project_repo = ProjectRepository(session)
+    return MessageService(message_repo, project_repo)

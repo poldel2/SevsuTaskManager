@@ -2,6 +2,8 @@ from sqlalchemy import Column, String, Integer
 from sqlalchemy.orm import relationship
 
 from core.db import Base
+from models.domain.user_project import user_project_table
+
 
 class User(Base):
     __tablename__ = "users"
@@ -14,5 +16,7 @@ class User(Base):
     middle_name = Column(String)
     group = Column(String)
 
-    projects = relationship("Project", back_populates="owner")
-    tasks = relationship("Task", back_populates="assignee")  # Добавляем связь с задачами
+    projects_owned = relationship("Project", back_populates="owner")
+    tasks = relationship("Task", back_populates="assignee")
+    sent_messages = relationship("Message", back_populates="sender")
+    projects = relationship("Project", secondary=user_project_table, back_populates="users")

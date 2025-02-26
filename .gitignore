@@ -1,5 +1,6 @@
 .env
 .venv
 .env.test
+alembic.ini
 /venv
 /.idea

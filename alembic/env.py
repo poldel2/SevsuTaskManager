@@ -8,9 +8,11 @@ from models.domain.users import User
 from models.domain.projects import Project
 from models.domain.sprints import Sprint
 from models.domain.tasks import Task
+from models.domain.messages import Message
+from models.domain.user_project import user_project_table
 
 config = context.config
-target_metadata = Task.metadata
+target_metadata = user_project_table.metadata
 
 # Настройка логгирования
 if config.config_file_name is not None:
