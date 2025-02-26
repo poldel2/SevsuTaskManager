@@ -55,7 +55,7 @@ async def delete_project(
 async def add_user_to_project(
     project_id: int,
     user_id: int,
-    role: str = "member",  # Роль по умолчанию
+    role: str = "MEMBER",  # Роль по умолчанию
     service: ProjectService = Depends(get_project_service),
     current_user: dict = Depends(get_current_user)
 ):
