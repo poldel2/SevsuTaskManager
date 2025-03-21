@@ -4,6 +4,7 @@ from fastapi import HTTPException, status
 
 from models.domain.projects import Project
 from models.schemas.projects import ProjectCreate, ProjectUpdate
+from models.schemas.users import UserResponse
 from repositories.project_repository import ProjectRepository
 from repositories.task_column_repository import TaskColumnRepository
 
@@ -103,6 +104,6 @@ class ProjectService:
             )
         await self.repository.remove_user_from_project(project_id, user_id)
 
-    async def get_project_users(self, project_id: int, user_id: int) -> Sequence[dict]:
+    async def get_project_users(self, project_id: int, user_id: int) -> Sequence[UserResponse]:
         await self.get_project(project_id, user_id)  # Проверка доступа
         return await self.repository.get_project_users(project_id)

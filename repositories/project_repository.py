@@ -7,6 +7,8 @@ from sqlalchemy.orm import joinedload
 from models.domain.projects import Project
 from models.domain.users import User
 from models.domain.user_project import user_project_table, Role  # Убедитесь, что импорт правильный
+from models.schemas.users import UserResponse
+
 
 class ProjectRepository:
     def __init__(self, session: AsyncSession):
@@ -81,9 +83,9 @@ class ProjectRepository:
         )
         await self.session.commit()
 
-    async def get_project_users(self, project_id: int) -> Sequence[dict]:
+    async def get_project_users(self, project_id: int) -> Sequence[UserResponse]:
         result = await self.session.execute(
-            select(user_project_table.c.user_id, user_project_table.c.role)
+            select(UserResponse)
             .where(user_project_table.c.project_id == project_id)
         )
-        return [{"user_id": row.user_id, "role": row.role.value} for row in result]
+        return result.unique().scalars().all()

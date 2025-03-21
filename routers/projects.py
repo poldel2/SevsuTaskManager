@@ -75,7 +75,7 @@ async def remove_user_from_project(
     await service.remove_user_from_project(project_id, user_id, current_user.id)  # TODO:: заменить на current_user.id
     return {"message": f"User {user_id} removed from project {project_id}"}
 
-@router.get("/{project_id}/users", response_model=list[dict])
+@router.get("/{project_id}/users", response_model=list[UserResponse])
 async def get_project_users(
     project_id: int,
     service: ProjectService = Depends(get_project_service),
