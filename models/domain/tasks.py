@@ -17,7 +17,9 @@ class Task(Base):
     project_id = Column(Integer, ForeignKey("projects.id"), nullable=False)
     sprint_id = Column(Integer, ForeignKey("sprints.id"), nullable=True)
     assignee_id = Column(Integer, ForeignKey("users.id"), nullable=True)  # Исполнитель
+    column_id = Column(Integer, ForeignKey("task_columns.id"), nullable=True)
 
     project = relationship("Project", back_populates="tasks")
     sprint = relationship("Sprint", back_populates="tasks")
     assignee = relationship("User", back_populates="tasks")  # Связь с User
+    column = relationship("TaskColumn", back_populates="tasks")

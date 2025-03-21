@@ -5,17 +5,28 @@ from fastapi import HTTPException, status
 from models.domain.projects import Project
 from models.schemas.projects import ProjectCreate, ProjectUpdate
 from repositories.project_repository import ProjectRepository
+from repositories.task_column_repository import TaskColumnRepository
+
 
 class ProjectService:
-    def __init__(self, repository: ProjectRepository):
+    def __init__(self, repository: ProjectRepository, column_repo: TaskColumnRepository):
         self.repository = repository
+        self.column_repo = column_repo
 
     async def create_project(self, project_data: dict, owner_id: int) -> Project:
         project = await self.repository.create({
             **project_data,
             "owner_id": owner_id
         })
-        await self.repository.add_user_to_project(project.id, owner_id, "owner")
+        default_columns = [
+            {"name": "К выполнению", "project_id": project.id, "position": 0, "color": "#b3b3b3"},
+            {"name": "Выполнить", "project_id": project.id, "position": 1, "color": "#fabd06"},
+            {"name": "Готово", "project_id": project.id, "position": 2, "color": "#22b622"},
+        ]
+        for column_data in default_columns:
+            await self.column_repo.create(column_data)
+
+        await self.repository.add_user_to_project(project.id, owner_id, "OWNER")
         return project
 
     async def get_user_projects(self, user_id: int) -> Sequence[Project]:

@@ -8,6 +8,7 @@ class UserCreate(BaseModel):
     last_name: Optional[str] = None
     middle_name: Optional[str] = None
     group: Optional[str] = None
+    password: str
 
 class UserResponse(BaseModel):
     id: int
@@ -22,3 +23,7 @@ class UserResponse(BaseModel):
 class Token(BaseModel):
     access_token: str
     token_type: str
+
+class UserLogin(BaseModel):
+    email: EmailStr
+    password: str

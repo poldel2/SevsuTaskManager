@@ -1,8 +1,9 @@
 from fastapi import APIRouter, Depends, HTTPException, status, WebSocket, WebSocketDisconnect
 from services.message_service import MessageService
 from models.schemas.messages import MessageCreate, MessageResponse
-from core.security import get_current_user
+from core.security import get_current_user, get_current_user_websocket
 from dependencies import get_message_service
+from models.schemas.users import UserResponse
 
 router = APIRouter(prefix="/projects/{project_id}/chat", tags=["chat"])
 
@@ -11,7 +12,7 @@ async def create_message(
     project_id: int,
     message_data: MessageCreate,
     service: MessageService = Depends(get_message_service),
-    current_user: dict = Depends(get_current_user),
+    current_user: UserResponse = Depends(get_current_user),
 ):
     return await service.create_message(project_id, message_data, current_user.id)
 
@@ -19,7 +20,7 @@ async def create_message(
 async def get_messages(
     project_id: int,
     service: MessageService = Depends(get_message_service),
-    current_user: dict = Depends(get_current_user),
+    current_user: UserResponse = Depends(get_current_user),
 ):
     return await service.get_messages_by_project(project_id, current_user.id)
 
@@ -28,13 +29,13 @@ async def websocket_endpoint(
     websocket: WebSocket,
     project_id: int,
     service: MessageService = Depends(get_message_service),
-    current_user: dict = Depends(get_current_user),
+    current_user: UserResponse = Depends(get_current_user_websocket),
 ):
     await service.connect(websocket, project_id, current_user.id)
     try:
         while True:
-            data = await websocket.receive_text()  # Получаем текст от клиента
-            message_data = MessageCreate(content=data)  # Создаем объект сообщения
-            await service.create_message(project_id, message_data, current_user.id)  # Сохраняем и рассылаем
+            data = await websocket.receive_text()
+            message_data = MessageCreate(content=data)
+            await service.create_message(project_id, message_data, current_user.id)
     except WebSocketDisconnect:
         await service.disconnect(websocket, project_id)

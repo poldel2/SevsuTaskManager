@@ -42,3 +42,4 @@ iniconfig~=2.0.0
 email_validator~=2.2.0
 packaging~=24.2
 tomli~=2.2.1
+passlib[bcrypt]

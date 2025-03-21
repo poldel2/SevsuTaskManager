@@ -1,27 +1,69 @@
+import datetime
+
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy import select
+from sqlalchemy import select, update
+from passlib.context import CryptContext
+from typing import Optional, Sequence
+
 from models.domain.users import User
-from models.schemas.users import UserCreate
+from models.domain.tokens import Token
+from models.schemas.users import UserCreate, UserResponse
 
 class UserRepository:
     def __init__(self, session: AsyncSession):
         self.session = session
+        self.pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 
-    async def get_by_sub(self, sub: str) -> User | None:
-        result = await self.session.execute(
-            select(User).where(User.sub == sub)
+    async def create_user(self, user_data: UserCreate) -> UserResponse:
+        hashed_password = self.pwd_context.hash(user_data.password) if user_data.password else None
+        user = User(
+            sub=user_data.sub,
+            email=user_data.email,
+            first_name=user_data.first_name,
+            last_name=user_data.last_name,
+            middle_name=user_data.middle_name,
+            group=user_data.group,
+            hashed_password=hashed_password
         )
-        return result.scalar_one_or_none()
-
-    async def get_by_id(self, user_id: int) -> User | None:
-        result = await self.session.execute(
-            select(User).where(User.id == user_id)
-        )
-        return result.scalar_one_or_none()
-
-    async def create_user(self, user_data: UserCreate) -> User:
-        user = User(**user_data.model_dump())
         self.session.add(user)
         await self.session.commit()
         await self.session.refresh(user)
-        return user
+        return UserResponse.model_validate(user)
+
+    async def get_by_sub(self, sub: str) -> Optional[UserResponse]:
+        result = await self.session.execute(select(User).where(User.sub == sub))
+        user = result.scalar_one_or_none()
+        return UserResponse.model_validate(user) if user else None
+
+    async def get_by_id(self, user_id: int) -> Optional[UserResponse]:
+        result = await self.session.execute(select(User).where(User.id == user_id))
+        user = result.scalar_one_or_none()
+        return UserResponse.model_validate(user) if user else None
+
+    async def get_by_email(self, email: str) -> Optional[User]:
+        result = await self.session.execute(select(User).where(User.email == email))
+        return result.scalar_one_or_none()
+
+    def verify_password(self, plain_password: str, hashed_password: str) -> bool:
+        return self.pwd_context.verify(plain_password, hashed_password)
+
+    async def create_token(self, user_id: int, token: str, expires_at: datetime) -> None:
+        token_obj = Token(
+            token=token,
+            user_id=user_id,
+            expires_at=expires_at
+        )
+        self.session.add(token_obj)
+        await self.session.commit()
+
+    async def get_token(self, token: str) -> Optional[Token]:
+        result = await self.session.execute(select(Token).where(Token.token == token))
+        return result.scalar_one_or_none()
+
+    async def revoke_token(self, token: str) -> None:
+        await self.session.execute(
+            update(Token)
+            .where(Token.token == token)
+            .values(is_active=False)
+        )
+        await self.session.commit()

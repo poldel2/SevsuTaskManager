@@ -18,3 +18,4 @@ class Project(Base):
     tasks = relationship("Task", back_populates="project")
     messages = relationship("Message", back_populates="project")
     users = relationship("User", secondary=user_project_table, back_populates="projects")  # Связь N:N с пользователями
+    columns = relationship("TaskColumn", back_populates="project")

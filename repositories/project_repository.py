@@ -6,7 +6,7 @@ from sqlalchemy.orm import joinedload
 
 from models.domain.projects import Project
 from models.domain.users import User
-from models.domain.user_project import user_project_table
+from models.domain.user_project import user_project_table, Role  # Убедитесь, что импорт правильный
 
 class ProjectRepository:
     def __init__(self, session: AsyncSession):
@@ -24,24 +24,22 @@ class ProjectRepository:
             select(Project)
             .where(Project.id == project_id)
             .options(
-                joinedload(Project.owner),  # Загрузка владельца
-                joinedload(Project.users),  # Загрузка связанных пользователей
+                joinedload(Project.owner),
+                joinedload(Project.users),
             )
         )
-        # Добавляем .unique() для устранения дубликатов из-за коллекций
         return result.unique().scalar_one_or_none()
 
     async def get_all_for_user(self, user_id: int) -> Sequence[Project]:
         result = await self.session.execute(
             select(Project)
-            .join(user_project_table, user_project_table.c.project_id == Project.id)
+            .join(user_project_table, user_project_table.c.project_id == Project.id)  # Условие соединения
             .where(user_project_table.c.user_id == user_id)
             .options(
                 joinedload(Project.owner),
                 joinedload(Project.users),
             )
         )
-        # .unique() для коллекций перед .scalars()
         return result.unique().scalars().all()
 
     async def update(self, project_id: int, update_data: dict) -> Project | None:
@@ -63,10 +61,14 @@ class ProjectRepository:
         await self.session.commit()
 
     async def add_user_to_project(self, project_id: int, user_id: int, role: str) -> None:
+        try:
+            role_enum = Role[role.upper()]
+        except KeyError:
+            raise ValueError(f"Invalid role: {role}. Must be one of: {', '.join(r.name for r in Role)}")
         stmt = insert(user_project_table).values(
             user_id=user_id,
             project_id=project_id,
-            role=role
+            role=role_enum
         ).on_conflict_do_nothing()
         await self.session.execute(stmt)
         await self.session.commit()
@@ -84,4 +86,4 @@ class ProjectRepository:
             select(user_project_table.c.user_id, user_project_table.c.role)
             .where(user_project_table.c.project_id == project_id)
         )
-        return [{"user_id": row.user_id, "role": row.role} for row in result]
+        return [{"user_id": row.user_id, "role": row.role.value} for row in result]

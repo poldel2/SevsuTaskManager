@@ -20,7 +20,8 @@ class TaskRepository:
             .options(
                 selectinload(Task.project),
                 selectinload(Task.sprint),
-                selectinload(Task.assignee),  # Загружаем данные о пользователе
+                selectinload(Task.assignee),
+                selectinload(Task.column),
             )
             .where(Task.id == task_id)
         )
@@ -33,6 +34,7 @@ class TaskRepository:
                 selectinload(Task.project),
                 selectinload(Task.sprint),
                 selectinload(Task.assignee),
+                selectinload(Task.column),
             )
             .where(Task.project_id == project_id)
         )
@@ -45,6 +47,7 @@ class TaskRepository:
                 selectinload(Task.project),
                 selectinload(Task.sprint),
                 selectinload(Task.assignee),
+                selectinload(Task.column),
             )
             .where(Task.sprint_id == sprint_id)
         )
