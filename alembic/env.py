@@ -7,7 +7,7 @@ import asyncio
 from models.domain.users import User
 from models.domain.projects import Project
 from models.domain.sprints import Sprint
-from models.domain.tasks import Task
+from models.domain.tasks import *
 from models.domain.messages import Message
 from models.domain.user_project import user_project_table
 from models.domain.task_columns import TaskColumn

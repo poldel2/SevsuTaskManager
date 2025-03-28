@@ -3,12 +3,13 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from models.domain.users import User
 from models.schemas.projects import ProjectCreate, ProjectUpdate, Project
-from dependencies import get_project_service, get_task_column_service
+from dependencies import get_project_service, get_task_column_service, get_grading_service
 from core.security import get_current_user
 from models.schemas.task_columns import TaskColumnUpdate, TaskColumnCreate, TaskColumn
 from models.schemas.users import UserResponse
 from services.project_service import ProjectService
 from services.task_column_service import TaskColumnService
+from services.grading_service import GradingService
 
 router = APIRouter(prefix="/projects", tags=["projects"])
 
@@ -119,3 +120,47 @@ async def delete_column(
 ):
     await column_service.delete(project_id, column_id, current_user.id)
     return {"message": "Column deleted"}
+
+@router.get("/{project_id}/reports/participants", response_model=list[dict])
+async def get_project_participants_report(
+    project_id: int,
+    service: ProjectService = Depends(get_project_service),
+    grading_service: GradingService = Depends(get_grading_service),
+    current_user: User = Depends(get_current_user)
+):
+    """
+    Get a report of all participants' progress in the project.
+    Shows completed tasks by difficulty level and auto/manual grades.
+    Only project leaders and teachers can access this endpoint.
+    """
+    # Check if user is project leader or teacher
+    if not (current_user.is_teacher or await service._is_user_project_leader(current_user.id, project_id)):
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Only project leaders and teachers can access project reports"
+        )
+    
+    return await grading_service.get_participants_progress(project_id)
+
+@router.post("/{project_id}/participants/{user_id}/grade")
+async def set_participant_manual_grade(
+    project_id: int,
+    user_id: int,
+    grade: str,
+    service: ProjectService = Depends(get_project_service),
+    grading_service: GradingService = Depends(get_grading_service),
+    current_user: User = Depends(get_current_user)
+):
+    """
+    Set a manual grade for a project participant.
+    Only project leaders and teachers can set grades.
+    """
+    # Check if user is project leader or teacher
+    if not (current_user.is_teacher or await service._is_user_project_leader(current_user.id, project_id)):
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Only project leaders and teachers can set manual grades"
+        )
+    
+    await grading_service.set_manual_grade(user_id, project_id, grade)
+    return {"message": f"Manual grade set to {grade}"}

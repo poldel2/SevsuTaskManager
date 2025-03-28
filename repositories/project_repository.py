@@ -84,8 +84,12 @@ class ProjectRepository:
         await self.session.commit()
 
     async def get_project_users(self, project_id: int) -> Sequence[UserResponse]:
-        result = await self.session.execute(
-            select(UserResponse)
+        stmt = (
+            select(User)
+            .join(user_project_table, User.id == user_project_table.c.user_id)
             .where(user_project_table.c.project_id == project_id)
         )
-        return result.unique().scalars().all()
+        result = await self.session.execute(stmt)
+        users = result.unique().scalars().all()
+
+        return [UserResponse.model_validate(user) for user in users]

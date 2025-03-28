@@ -7,6 +7,7 @@ class Role(PyEnum):
     OWNER = "owner"
     MEMBER = "member"
     ADMIN = "admin"
+    TEACHER = "teacher"
 
 user_project_table = Table(
     "user_project",

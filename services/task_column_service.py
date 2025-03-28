@@ -17,7 +17,7 @@ class TaskColumnService:
             raise HTTPException(status_code=404, detail="Project not found")
 
         project_users = await self.project_repo.get_project_users(project_id)
-        if not any(user['user_id'] == user_id for user in project_users):
+        if not any(user.id == user_id for user in project_users):
             raise HTTPException(
                 status_code=status.HTTP_403_FORBIDDEN,
                 detail="You do not have access to this project"

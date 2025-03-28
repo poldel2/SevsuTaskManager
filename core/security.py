@@ -44,7 +44,8 @@ async def get_current_user(
     user = await user_repo.get_by_id(user_id)
     if user is None:
         raise HTTPException(status_code=404, detail="User not found")
-    return user
+    
+    return UserResponse.model_validate(user)
 
 
 async def get_current_user_websocket(
@@ -82,4 +83,5 @@ async def get_current_user_websocket(
         await websocket.close(code=1008, reason="User not found")
         raise HTTPException(status_code=404, detail="User not found")
 
-    return user
+    # Используем model_validate для безопасного преобразования
+    return UserResponse.model_validate(user)

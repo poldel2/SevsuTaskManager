@@ -1,5 +1,6 @@
 from fastapi import Depends
 
+from repositories.grading_repository import GradingRepository
 from repositories.project_repository import ProjectRepository
 from repositories.sprint_repository import SprintRepository
 from repositories.task_column_repository import TaskColumnRepository
@@ -9,6 +10,7 @@ from services.auth_service import AuthService
 from core.db import get_db
 from sqlalchemy.ext.asyncio import AsyncSession
 from repositories.message_repository import MessageRepository
+from services.grading_service import GradingService
 from services.message_service import MessageService
 
 from services.project_service import ProjectService
@@ -43,7 +45,8 @@ def get_task_service(
     task_repo = TaskRepository(session)
     sprint_repo = SprintRepository(session)
     project_repo = ProjectRepository(session)
-    return TaskService(task_repo, project_repo, sprint_repo)
+    grading_service = get_grading_service(session)
+    return TaskService(task_repo, project_repo, sprint_repo, grading_service)
 
 
 message_service_instance = MessageService(
@@ -62,3 +65,7 @@ def get_task_column_service(session: AsyncSession = Depends(get_db)) -> TaskColu
     column_repo = TaskColumnRepository(session)
     project_repo = ProjectRepository(session)
     return TaskColumnService(column_repo, project_repo)
+
+def get_grading_service(session: AsyncSession = Depends(get_db)) -> GradingService:
+    grading_repo = GradingRepository(session)
+    return GradingService(grading_repo)

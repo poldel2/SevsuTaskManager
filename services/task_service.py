@@ -3,22 +3,27 @@ from sqlalchemy import select
 from sqlalchemy.orm import selectinload
 
 from models.domain.task_columns import TaskColumn
-from models.domain.tasks import Task
+from models.domain.tasks import Task, TaskStatus, TaskGrade
+from models.domain.users import User
 from repositories.task_repository import TaskRepository
 from repositories.project_repository import ProjectRepository
 from repositories.sprint_repository import SprintRepository
 from models.schemas.tasks import TaskResponse
+from services.grading_service import GradingService
+
 
 class TaskService:
     def __init__(
         self,
         task_repository: TaskRepository,
         project_repository: ProjectRepository,
-        sprint_repository: SprintRepository
+        sprint_repository: SprintRepository,
+        grading_service: GradingService
     ):
         self.task_repository = task_repository
         self.project_repository = project_repository
         self.sprint_repository = sprint_repository
+        self.grading_service = grading_service
 
     async def _validate_project_access(self, project_id: int, user_id: int):
         project = await self.project_repository.get_by_id(project_id)
@@ -39,7 +44,6 @@ class TaskService:
                     detail="Invalid sprint_id for the project"
                 )
 
-        # Проверяем column_id, если он передан
         if task_data.get("column_id"):
             column = await self.task_repository.session.execute(
                 select(TaskColumn).where(TaskColumn.id == task_data["column_id"])
@@ -52,7 +56,7 @@ class TaskService:
                 )
 
         task = await self.task_repository.create(task_data)
-        task = await self.task_repository.get_by_id(task.id)  # Загружаем с отношениями
+        task = await self.task_repository.get_by_id(task.id)
         return TaskResponse.model_validate(task)
 
     async def get_task(self, task_id: int, user_id: int) -> TaskResponse:
@@ -99,28 +103,55 @@ class TaskService:
         updated = await self.task_repository.update(task_id, update_data)
         return TaskResponse.model_validate(updated)
 
-    async def update_task_partial(self, task_id: int, update_data: dict, user_id: int) -> TaskResponse:
+    async def update_task_partial(
+            self,
+            task_id: int,
+            update_data: dict,
+            user_id: int
+    ) -> TaskResponse:
         task = await self.get_task(task_id, user_id)
-        if update_data.get("sprint_id"):
-            sprint = await self.sprint_repository.get_by_id(update_data["sprint_id"])
-            if not sprint or sprint.project_id != task.project.id:
-                raise HTTPException(
-                    status_code=status.HTTP_400_BAD_REQUEST,
-                    detail="Invalid sprint_id for the project"
-                )
-        if update_data.get("column_id"):
-            column = await self.task_repository.session.execute(
-                select(TaskColumn).where(TaskColumn.id == update_data["column_id"])
-            )
-            column = column.scalar_one_or_none()
-            if not column or column.project_id != task.project_id:
-                raise HTTPException(
-                    status_code=status.HTTP_400_BAD_REQUEST,
-                    detail="Invalid column_id for the project"
-                )
+
+        if "status" in update_data:
+            new_status = update_data["status"]
+            # Проверка прав на изменение статуса
+            if new_status == TaskStatus.APPROVED_BY_LEADER.value:
+                if not await self._is_project_leader(user_id, task.project_id):
+                    raise HTTPException(
+                        status_code=status.HTTP_403_FORBIDDEN,
+                        detail="Only project leaders can approve tasks"
+                    )
+                if task.grade == TaskGrade.HARD.value:
+                    raise HTTPException(
+                        status_code=status.HTTP_403_FORBIDDEN,
+                        detail="Hard tasks can only be approved by teacher"
+                    )
+
+            if new_status == TaskStatus.APPROVED_BY_TEACHER.value:
+                if not await self._is_teacher(user_id):
+                    raise HTTPException(
+                        status_code=status.HTTP_403_FORBIDDEN,
+                        detail="Only teachers can perform this action"
+                    )
+
         updated = await self.task_repository.update_partial(task_id, update_data)
+
+        if "status" in update_data and update_data["status"] in [
+            TaskStatus.APPROVED_BY_LEADER.value,
+            TaskStatus.APPROVED_BY_TEACHER.value
+        ]:
+            # Pass the assignee ID to update_user_progress
+            await self.grading_service.update_user_progress(updated, updated.assignee_id)
+
         return TaskResponse.model_validate(updated)
 
     async def delete_task(self, task_id: int, user_id: int) -> None:
         await self.get_task(task_id, user_id)
         await self.task_repository.delete(task_id)
+
+    async def _is_project_leader(self, user_id: int, project_id: int) -> bool:
+        user = await self.task_repository.session.get(User, user_id)
+        return user.is_project_leader(project_id)
+
+    async def _is_teacher(self, user_id: int) -> bool:
+        user = await self.task_repository.session.get(User, user_id)
+        return user.is_teacher

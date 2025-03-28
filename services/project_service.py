@@ -7,6 +7,7 @@ from models.schemas.projects import ProjectCreate, ProjectUpdate
 from models.schemas.users import UserResponse
 from repositories.project_repository import ProjectRepository
 from repositories.task_column_repository import TaskColumnRepository
+from models.domain.users import User
 
 
 class ProjectService:
@@ -107,3 +108,19 @@ class ProjectService:
     async def get_project_users(self, project_id: int, user_id: int) -> Sequence[UserResponse]:
         await self.get_project(project_id, user_id)  # Проверка доступа
         return await self.repository.get_project_users(project_id)
+
+    async def _is_user_project_leader(self, user_id: int, project_id: int) -> bool:
+        """
+        Check if user is project leader (owner or admin)
+        """
+        user = await self.repository.session.get(User, user_id)
+        if not user:
+            return False
+        
+        # Check if user is project owner
+        project = await self.repository.get_by_id(project_id)
+        if project and project.owner_id == user_id:
+            return True
+            
+        # Check if user is project admin
+        return user.is_project_leader(project_id)

@@ -1,8 +1,8 @@
 from sqlalchemy import Column, String, Integer
-from sqlalchemy.orm import relationship
+from sqlalchemy.orm import relationship, object_session
 
 from core.db import Base
-from models.domain.user_project import user_project_table
+from models.domain.user_project import user_project_table, Role
 
 
 class User(Base):
@@ -22,3 +22,48 @@ class User(Base):
     sent_messages = relationship("Message", back_populates="sender")
     projects = relationship("Project", secondary=user_project_table, back_populates="users")
     tokens = relationship("Token", back_populates="user")
+    progress = relationship("UserProjectProgress", back_populates="user")
+
+    @property
+    def is_teacher(self):
+        try:
+            session = object_session(self)
+            if not session:
+                return False  # Если нет сессии, считаем что не учитель
+                
+            # Напрямую проверяем наличие роли учителя, не используя project_associations
+            result = session.query(user_project_table).filter(
+                user_project_table.c.user_id == self.id,
+                user_project_table.c.role == Role.TEACHER
+            ).first()
+            
+            return result is not None
+        except Exception:
+            return False
+
+    @property
+    def project_associations(self):
+        session = object_session(self)
+        if not session:
+            return []  # Если сессия отсутствует, возвращаем пустой список
+        return session.query(user_project_table).filter(
+            user_project_table.c.user_id == self.id
+        ).all()
+
+    def is_project_leader(self, project_id: int) -> bool:
+        try:
+            session = object_session(self)
+            if not session:
+                return False  # Если нет сессии, считаем что не лидер
+                
+            # Напрямую проверяем наличие роли лидера для конкретного проекта
+            result = session.query(user_project_table).filter(
+                user_project_table.c.user_id == self.id,
+                user_project_table.c.project_id == project_id,
+                user_project_table.c.role.in_([Role.ADMIN, Role.OWNER])
+            ).first()
+            
+            return result is not None
+        except Exception:
+            # В случае любой ошибки, безопасно возвращаем False
+            return False

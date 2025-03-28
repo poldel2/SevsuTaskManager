@@ -42,7 +42,7 @@ class MessageService:
         project = await self.project_repository.get_by_id(project_id)
         project_users = await self.project_repository.get_project_users(project_id)
         logger.info(f"project_users={project_users}")
-        if not project or not any(user['user_id'] == user_id for user in project_users):
+        if not project or not any(user.id == user_id for user in project_users):
             logger.error(f"Нет доступа к проекту {project_id} для user_id={user_id}")
             raise HTTPException(
                 status_code=status.HTTP_403_FORBIDDEN,

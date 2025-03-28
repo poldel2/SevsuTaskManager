@@ -64,13 +64,18 @@ class AuthService:
                 detail="Invalid email or password",
                 headers={"WWW-Authenticate": "Bearer"}
             )
-        user_response = UserResponse.model_validate(user)
-        return await self.create_jwt(user_response)
+        return await self.create_jwt(user)
 
-    async def create_jwt(self, user: UserResponse) -> Token:
+    async def create_jwt(self, user) -> Token:
+        """
+        Создает JWT токен для пользователя.
+        Параметр user может быть как объектом User, так и UserResponse
+        """
+        user_id = user.id
+        
         expires_at = datetime.utcnow() + timedelta(minutes=30)
         payload = {
-            "sub": str(user.id),
+            "sub": str(user_id),
             "exp": expires_at
         }
         token = jwt.encode(
@@ -78,7 +83,7 @@ class AuthService:
             settings.JWT_SECRET,
             algorithm=settings.JWT_ALGORITHM
         )
-        await self.user_repo.create_token(user.id, token, expires_at)
+        await self.user_repo.create_token(user_id, token, expires_at)
         return Token(access_token=token, token_type="bearer")
 
     async def create_user(self, user: UserCreate) -> UserResponse:
@@ -91,3 +96,14 @@ class AuthService:
 
     async def revoke_token(self, token: str) -> None:
         await self.user_repo.revoke_token(token)
+
+    async def get_current_user_info(self, user_id: int) -> UserResponse:
+        """
+        Получить информацию о текущем пользователе для фронтенда
+        """
+        user = await self.user_repo.get_by_id(user_id)
+        if not user:
+            raise HTTPException(status_code=404, detail="User not found")
+        
+        user_response = UserResponse.model_validate(user)
+        return user_response
