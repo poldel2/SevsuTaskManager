@@ -29,9 +29,8 @@ class User(Base):
         try:
             session = object_session(self)
             if not session:
-                return False  # Если нет сессии, считаем что не учитель
+                return False 
                 
-            # Напрямую проверяем наличие роли учителя, не используя project_associations
             result = session.query(user_project_table).filter(
                 user_project_table.c.user_id == self.id,
                 user_project_table.c.role == Role.TEACHER
@@ -45,7 +44,7 @@ class User(Base):
     def project_associations(self):
         session = object_session(self)
         if not session:
-            return []  # Если сессия отсутствует, возвращаем пустой список
+            return [] 
         return session.query(user_project_table).filter(
             user_project_table.c.user_id == self.id
         ).all()
@@ -54,9 +53,8 @@ class User(Base):
         try:
             session = object_session(self)
             if not session:
-                return False  # Если нет сессии, считаем что не лидер
+                return False 
                 
-            # Напрямую проверяем наличие роли лидера для конкретного проекта
             result = session.query(user_project_table).filter(
                 user_project_table.c.user_id == self.id,
                 user_project_table.c.project_id == project_id,
@@ -65,5 +63,4 @@ class User(Base):
             
             return result is not None
         except Exception:
-            # В случае любой ошибки, безопасно возвращаем False
             return False
