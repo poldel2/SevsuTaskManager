@@ -83,5 +83,4 @@ async def get_current_user_websocket(
         await websocket.close(code=1008, reason="User not found")
         raise HTTPException(status_code=404, detail="User not found")
 
-    # Используем model_validate для безопасного преобразования
     return UserResponse.model_validate(user)

@@ -15,7 +15,14 @@ class TaskCreate(TaskBase):
     sprint_id: Optional[int] = None
     assignee_id: Optional[int] = None
 
-class TaskUpdate(TaskBase):
+class TaskUpdate(BaseModel):
+    title: Optional[str] = Field(None, max_length=200)
+    description: Optional[str] = Field(None, max_length=1000)
+    status: Optional[str] = Field(None)  # to do, in_progress, done
+    priority: Optional[str] = Field(None, max_length=10)  # low, medium, high
+    grade: Optional[str] = Field(None, max_length=10)  # easy, medium, hard
+    column_id: Optional[int] = None
+    due_date: Optional[datetime] = None
     sprint_id: Optional[int] = None
     assignee_id: Optional[int] = None
 
