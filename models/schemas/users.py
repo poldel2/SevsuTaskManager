@@ -4,7 +4,7 @@ from sqlalchemy.orm import object_session
 from models.domain.user_project import user_project_table
 
 class UserCreate(BaseModel):
-    sub: str
+    sub: Optional[str] = None
     email: EmailStr
     first_name: Optional[str] = None
     last_name: Optional[str] = None

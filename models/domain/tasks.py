@@ -38,6 +38,7 @@ class Task(Base):
     created_at = Column(DateTime(timezone=True), default=datetime.now)
     updated_at = Column(DateTime(timezone=True), default=datetime.now, onupdate=datetime.now)
     due_date = Column(DateTime(timezone=True))
+    start_date = Column(DateTime(timezone=True), nullable=True)
 
     project_id = Column(Integer, ForeignKey("projects.id"), nullable=False)
     sprint_id = Column(Integer, ForeignKey("sprints.id"), nullable=True)

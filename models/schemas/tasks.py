@@ -1,4 +1,4 @@
-from datetime import datetime
+from datetime import datetime, date
 from pydantic import BaseModel, Field
 from typing import Optional
 
@@ -9,6 +9,8 @@ class TaskBase(BaseModel):
     priority: Optional[str] = Field("medium", max_length=10)  # low, medium, high
     grade: Optional[str] = Field("medium", max_length=10)  # easy, medium, hard
     column_id: Optional[int] = None
+    start_date: Optional[datetime] = None
+
     due_date: datetime | None = None
 
 class TaskCreate(TaskBase):
@@ -23,6 +25,7 @@ class TaskUpdate(BaseModel):
     grade: Optional[str] = Field(None, max_length=10)  # easy, medium, hard
     column_id: Optional[int] = None
     due_date: Optional[datetime] = None
+    start_date: Optional[datetime] = None
     sprint_id: Optional[int] = None
     assignee_id: Optional[int] = None
 
