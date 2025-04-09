@@ -4,3 +4,10 @@
 alembic.ini
 /venv
 /.idea
+
+# Logs
+*.log
+/logs/
+/logs/*
+__pycache__/
+*.py[cod]

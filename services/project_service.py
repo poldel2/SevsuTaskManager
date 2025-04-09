@@ -8,12 +8,17 @@ from models.schemas.users import UserResponse
 from repositories.project_repository import ProjectRepository
 from repositories.task_column_repository import TaskColumnRepository
 from models.domain.users import User
+from services.notification_service import NotificationService
 
 
 class ProjectService:
-    def __init__(self, repository: ProjectRepository, column_repo: TaskColumnRepository):
-        self.repository = repository
-        self.column_repo = column_repo
+    def __init__(
+        self,
+        project_repository: ProjectRepository,
+        notification_service: NotificationService
+    ):
+        self.repository = project_repository
+        self.notification_service = notification_service
 
     async def create_project(self, project_data: dict, owner_id: int) -> Project:
         project = await self.repository.create({
@@ -81,15 +86,26 @@ class ProjectService:
             )
         await self.repository.delete(project_id)
 
-    async def add_user_to_project(self, project_id: int, user_id: int, role: str, current_user_id: int) -> None:
-        project = await self.get_project(project_id, current_user_id)
-        # Только владелец может добавлять участников
-        if project.owner_id != current_user_id:
-            raise HTTPException(
-                status_code=status.HTTP_403_FORBIDDEN,
-                detail="Only project owner can add users"
+    async def add_user_to_project(
+        self,
+        project_id: int,
+        user_id: int,
+        role: str,
+        inviter_id: int
+    ) -> Project:
+        project = await self.repository.add_user_to_project(project_id, user_id, role)
+        
+        if project:
+            inviter = await self.repository.get_user(inviter_id)
+            await self.notification_service.notify_team_invitation(
+                user_id=user_id,
+                project_id=project.id,
+                project_name=project.name,
+                inviter_id=inviter_id,
+                inviter_name=f"{inviter.first_name} {inviter.last_name}"
             )
-        await self.repository.add_user_to_project(project_id, user_id, role)
+        
+        return project
 
     async def remove_user_from_project(self, project_id: int, user_id: int, current_user_id: int) -> None:
         project = await self.get_project(project_id, current_user_id)

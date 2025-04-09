@@ -1,35 +1,43 @@
 from fastapi import Depends
-
 from repositories.grading_repository import GradingRepository
 from repositories.project_repository import ProjectRepository
 from repositories.sprint_repository import SprintRepository
 from repositories.task_column_repository import TaskColumnRepository
 from repositories.task_repository import TaskRepository
 from repositories.user_repository import UserRepository
-from services.auth_service import AuthService
-from core.db import get_db
-from sqlalchemy.ext.asyncio import AsyncSession
 from repositories.message_repository import MessageRepository
+from repositories.notification_repository import NotificationRepository
+from services.auth_service import AuthService
 from services.grading_service import GradingService
 from services.message_service import MessageService
-
+from services.notification_service import NotificationService
 from services.project_service import ProjectService
 from services.sprint_service import SprintService
 from services.task_column_service import TaskColumnService
 from services.task_service import TaskService
-
+from core.db import get_db
+from sqlalchemy.ext.asyncio import AsyncSession
 
 async def get_auth_service(
     session: AsyncSession = Depends(get_db)
 ) -> AuthService:
     return AuthService(UserRepository(session))
 
-async def get_project_service(
+async def get_notification_repository(db: AsyncSession = Depends(get_db)):
+    return NotificationRepository(db)
+
+async def get_notification_service(
     session: AsyncSession = Depends(get_db)
+) -> NotificationService:
+    notification_repo = NotificationRepository(session)
+    return NotificationService(notification_repo)
+
+async def get_project_service(
+    session: AsyncSession = Depends(get_db),
+    notification_service: NotificationService = Depends(get_notification_service)
 ) -> ProjectService:
-    column_repo = TaskColumnRepository(session)
-    repo = ProjectRepository(session)
-    return ProjectService(repo, column_repo)
+    project_repo = ProjectRepository(session)
+    return ProjectService(project_repo, notification_service)
 
 async def get_sprint_service(
     session: AsyncSession = Depends(get_db)
@@ -38,34 +46,34 @@ async def get_sprint_service(
     project_repo = ProjectRepository(session)
     return SprintService(sprint_repo, project_repo)
 
-
-def get_task_service(
-        session: AsyncSession = Depends(get_db)
+async def get_task_service(
+    session: AsyncSession = Depends(get_db),
+    notification_service: NotificationService = Depends(get_notification_service)
 ) -> TaskService:
     task_repo = TaskRepository(session)
-    sprint_repo = SprintRepository(session)
     project_repo = ProjectRepository(session)
-    grading_service = get_grading_service(session)
-    return TaskService(task_repo, project_repo, sprint_repo, grading_service)
+    sprint_repo = SprintRepository(session)
+    grading_repo = GradingRepository(session)
+    grading_service = GradingService(grading_repo)
+    return TaskService(task_repo, project_repo, sprint_repo, grading_service, notification_service)
 
+def get_message_service(
+    session: AsyncSession = Depends(get_db)
+) -> MessageService:
+    message_repo = MessageRepository(session)
+    project_repo = ProjectRepository(session)
+    user_repo = UserRepository(session)
+    return MessageService(message_repo, project_repo, user_repo)
 
-message_service_instance = MessageService(
-    message_repository=MessageRepository(None),
-    project_repository=ProjectRepository(None),
-    user_repository=UserRepository(None)
-)
-
-def get_message_service(db: AsyncSession = Depends(get_db)) -> MessageService:
-    message_service_instance.message_repository.session = db
-    message_service_instance.project_repository.session = db
-    message_service_instance.user_repository.session = db
-    return message_service_instance
-
-def get_task_column_service(session: AsyncSession = Depends(get_db)) -> TaskColumnService:
+def get_task_column_service(
+    session: AsyncSession = Depends(get_db)
+) -> TaskColumnService:
     column_repo = TaskColumnRepository(session)
     project_repo = ProjectRepository(session)
     return TaskColumnService(column_repo, project_repo)
 
-def get_grading_service(session: AsyncSession = Depends(get_db)) -> GradingService:
+def get_grading_service(
+    session: AsyncSession = Depends(get_db)
+) -> GradingService:
     grading_repo = GradingRepository(session)
     return GradingService(grading_repo)

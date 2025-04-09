@@ -1,9 +1,13 @@
 # backend/Dockerfile
 FROM python:3.11
 
+WORKDIR /app
 
 COPY requirements.txt .
 RUN pip install -r requirements.txt
+
+# Создаем директорию для логов и настраиваем права
+RUN mkdir -p /app/logs && chmod 777 /app/logs
 
 COPY . .
 

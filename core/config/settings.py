@@ -14,7 +14,6 @@ class Settings(BaseSettings):
     JWT_ALGORITHM: str = "HS256"
 
     model_config = SettingsConfigDict(
-        # Динамически выбираем .env-файл в зависимости от окружения
         env_file=".env.test" if os.getenv("TESTING") else ".env",
         env_file_encoding="utf-8",
         extra="forbid"

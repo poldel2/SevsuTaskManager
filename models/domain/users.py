@@ -23,6 +23,7 @@ class User(Base):
     projects = relationship("Project", secondary=user_project_table, back_populates="users")
     tokens = relationship("Token", back_populates="user")
     progress = relationship("UserProjectProgress", back_populates="user")
+    notifications = relationship("Notification", back_populates="user", cascade="all, delete-orphan")
 
     @property
     def is_teacher(self):

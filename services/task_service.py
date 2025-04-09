@@ -10,6 +10,8 @@ from repositories.project_repository import ProjectRepository
 from repositories.sprint_repository import SprintRepository
 from models.schemas.tasks import TaskResponse
 from services.grading_service import GradingService
+from services.notification_service import NotificationService
+from models.domain.notifications import NotificationType
 
 
 class TaskService:
@@ -18,12 +20,14 @@ class TaskService:
         task_repository: TaskRepository,
         project_repository: ProjectRepository,
         sprint_repository: SprintRepository,
-        grading_service: GradingService
+        grading_service: GradingService,
+        notification_service: NotificationService
     ):
         self.task_repository = task_repository
         self.project_repository = project_repository
         self.sprint_repository = sprint_repository
         self.grading_service = grading_service
+        self.notification_service = notification_service
 
     async def _validate_project_access(self, project_id: int, user_id: int):
         project = await self.project_repository.get_by_id(project_id)
@@ -56,6 +60,18 @@ class TaskService:
                 )
 
         task = await self.task_repository.create(task_data)
+        
+        # Отправляем уведомление, если назначен исполнитель
+        if task.assignee_id:
+            project = await self.project_repository.get_by_id(task_data["project_id"])
+            await self.notification_service.notify_task_assigned(
+                user_id=task.assignee_id,
+                task_id=task.id,
+                task_title=task.title,
+                project_id=task_data["project_id"],
+                project_name=project.title
+            )
+        
         task = await self.task_repository.get_by_id(task.id)
         return TaskResponse.model_validate(task)
 
@@ -133,6 +149,20 @@ class TaskService:
                         detail="Only teachers can perform this action"
                     )
 
+        # Если изменяется assignee_id
+        old_assignee_id = task.assignee_id
+        new_assignee_id = update_data.get('assignee_id')
+        
+        if new_assignee_id and new_assignee_id != old_assignee_id:
+            project = await self.project_repository.get_by_id(task.project_id)
+            await self.notification_service.notify_task_assigned(
+                user_id=new_assignee_id,
+                task_id=task.id,
+                task_title=task.title,
+                project_id=project.id,
+                project_name=project.title
+            )
+
         updated = await self.task_repository.update_partial(task_id, update_data)
 
         if "status" in update_data and update_data["status"] in [
@@ -155,3 +185,33 @@ class TaskService:
     async def _is_teacher(self, user_id: int) -> bool:
         user = await self.task_repository.session.get(User, user_id)
         return user.is_teacher
+
+    async def assign_task(self, task_id: int, assignee_id: int) -> Task:
+        task = await self.task_repository.assign_task(task_id, assignee_id)
+        if task and task.project:
+            await self.notification_service.notify_task_assigned(
+                user_id=assignee_id,
+                task_id=task.id,
+                task_title=task.title,
+                project_id=task.project.id,
+                project_name=task.project.name
+            )
+        return task
+
+    async def update_task_status(self, task_id: int, status: str) -> Task:
+        task = await self.task_repository.update_task_status(task_id, status)
+        if task and task.assignee_id:
+            await self.notification_service.create_notification(
+                user_id=task.assignee_id,
+                type=NotificationType.TASK_UPDATED,
+                title=f"Обновлен статус задачи: {task.title}",
+                message=f"Задача переведена в статус: {status}",
+                metadata={
+                    "task_id": task.id,
+                    "task_title": task.title,
+                    "project_id": task.project.id,
+                    "project_name": task.project.name,
+                    "status": status
+                }
+            )
+        return task
