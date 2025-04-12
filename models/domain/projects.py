@@ -20,3 +20,4 @@ class Project(Base):
     users = relationship("User", secondary=user_project_table, back_populates="projects")  # Связь N:N с пользователями
     columns = relationship("TaskColumn", back_populates="project")
     user_progress = relationship("UserProjectProgress", back_populates="project")
+    activities = relationship("ProjectActivity", back_populates="project", cascade="all, delete-orphan")

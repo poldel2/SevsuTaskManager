@@ -45,8 +45,6 @@ class TaskResponse(TaskBase):
     @classmethod
     def model_validate(cls, obj):
         data = obj.__dict__.copy()
-        data["assignee_name"] = obj.assignee.last_name if obj.assignee else None
-        data["column_name"] = obj.column.name if obj.column else None
         return cls(**data)
 
 class TaskApproval(BaseModel):

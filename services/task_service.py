@@ -12,6 +12,7 @@ from models.schemas.tasks import TaskResponse
 from services.grading_service import GradingService
 from services.notification_service import NotificationService
 from models.domain.notifications import NotificationType
+from services.activity_service import ActivityService, EntityType, ActionType
 
 
 class TaskService:
@@ -21,13 +22,15 @@ class TaskService:
         project_repository: ProjectRepository,
         sprint_repository: SprintRepository,
         grading_service: GradingService,
-        notification_service: NotificationService
+        notification_service: NotificationService,
+        activity_service: ActivityService
     ):
         self.task_repository = task_repository
         self.project_repository = project_repository
         self.sprint_repository = sprint_repository
         self.grading_service = grading_service
         self.notification_service = notification_service
+        self.activity_service = activity_service
 
     async def _validate_project_access(self, project_id: int, user_id: int):
         project = await self.project_repository.get_by_id(project_id)
@@ -72,6 +75,15 @@ class TaskService:
                 project_name=project.title
             )
         
+        await self.activity_service.log_activity(
+            project_id=task.project_id,
+            user_id=user_id,
+            entity_type=EntityType.TASK,
+            entity_id=task.id,
+            action=ActionType.CREATE,
+            changes=task_data
+        )
+
         task = await self.task_repository.get_by_id(task.id)
         return TaskResponse.model_validate(task)
 
@@ -117,7 +129,23 @@ class TaskService:
                     detail="Invalid column_id for the project"
                 )
         updated = await self.task_repository.update(task_id, update_data)
-        return TaskResponse.model_validate(updated)
+        task_response = TaskResponse.model_validate(task)
+        updated_response = TaskResponse.model_validate(updated)
+
+        await self.activity_service.log_activity(
+            project_id=updated.project_id,
+            user_id=user_id,
+            entity_type=EntityType.TASK,
+            entity_id=task_id,
+            action=ActionType.UPDATE,
+            changes={
+                "old": task_response.model_dump(),
+                "new": updated_response.model_dump(),
+                "changed_fields": update_data
+            }
+        )
+
+        return updated_response
 
     async def update_task_partial(
             self,
@@ -164,19 +192,45 @@ class TaskService:
             )
 
         updated = await self.task_repository.update_partial(task_id, update_data)
+        task_response = TaskResponse.model_validate(task)
+        updated_response = TaskResponse.model_validate(updated)
 
         if "status" in update_data and update_data["status"] in [
             TaskStatus.APPROVED_BY_LEADER.value,
             TaskStatus.APPROVED_BY_TEACHER.value
         ]:
-            # Pass the assignee ID to update_user_progress
             await self.grading_service.update_user_progress(updated, updated.assignee_id)
 
-        return TaskResponse.model_validate(updated)
+        changes = {
+            "old": task_response.model_dump(),
+            "new": updated_response.model_dump(),
+            "changed_fields": update_data
+        }
+
+        await self.activity_service.log_activity(
+            project_id=updated.project_id,
+            user_id=user_id,
+            entity_type=EntityType.TASK,
+            entity_id=task_id,
+            action=ActionType.UPDATE,
+            changes=changes
+        )
+
+        return updated_response
 
     async def delete_task(self, task_id: int, user_id: int) -> None:
-        await self.get_task(task_id, user_id)
+        task = await self.get_task(task_id, user_id)
+        task_response = TaskResponse.model_validate(task)
         await self.task_repository.delete(task_id)
+
+        await self.activity_service.log_activity(
+            project_id=task.project_id,
+            user_id=user_id,
+            entity_type=EntityType.TASK,
+            entity_id=task_id,
+            action=ActionType.DELETE,
+            changes={"task": task_response.model_dump()}
+        )
 
     async def _is_project_leader(self, user_id: int, project_id: int) -> bool:
         user = await self.task_repository.session.get(User, user_id)

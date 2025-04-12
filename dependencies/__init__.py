@@ -7,6 +7,7 @@ from repositories.task_repository import TaskRepository
 from repositories.user_repository import UserRepository
 from repositories.message_repository import MessageRepository
 from repositories.notification_repository import NotificationRepository
+from repositories.activity_repository import ActivityRepository
 from services.auth_service import AuthService
 from services.grading_service import GradingService
 from services.message_service import MessageService
@@ -15,6 +16,7 @@ from services.project_service import ProjectService
 from services.sprint_service import SprintService
 from services.task_column_service import TaskColumnService
 from services.task_service import TaskService
+from services.activity_service import ActivityService
 from core.db import get_db
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -32,6 +34,11 @@ async def get_notification_service(
     notification_repo = NotificationRepository(session)
     return NotificationService(notification_repo)
 
+async def get_activity_service(
+    db: AsyncSession = Depends(get_db)
+) -> ActivityService:
+    return ActivityService(ActivityRepository(db))
+
 async def get_project_service(
     session: AsyncSession = Depends(get_db),
     notification_service: NotificationService = Depends(get_notification_service)
@@ -48,14 +55,23 @@ async def get_sprint_service(
 
 async def get_task_service(
     session: AsyncSession = Depends(get_db),
-    notification_service: NotificationService = Depends(get_notification_service)
+    notification_service: NotificationService = Depends(get_notification_service),
+    activity_service: ActivityService = Depends(get_activity_service)
 ) -> TaskService:
     task_repo = TaskRepository(session)
     project_repo = ProjectRepository(session)
     sprint_repo = SprintRepository(session)
     grading_repo = GradingRepository(session)
     grading_service = GradingService(grading_repo)
-    return TaskService(task_repo, project_repo, sprint_repo, grading_service, notification_service)
+    
+    return TaskService(
+        task_repo, 
+        project_repo, 
+        sprint_repo, 
+        grading_service, 
+        notification_service,
+        activity_service
+    )
 
 def get_message_service(
     session: AsyncSession = Depends(get_db)

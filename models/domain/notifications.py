@@ -25,7 +25,6 @@ class Notification(Base):
     created_at = Column(DateTime, default=datetime.utcnow)
     notification_metadata = Column(JSON, nullable=True)
     
-    # Relationships
     user = relationship("User", back_populates="notifications")
 
     def __repr__(self):
