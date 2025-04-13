@@ -23,6 +23,14 @@ class TaskColumnRepository:
         )
         return result.scalars().all()
 
+    async def get_by_id(self, column_id: int) -> TaskColumn | None:
+        if column_id is None:
+            return None
+        result = await self.session.execute(
+            select(TaskColumn).where(TaskColumn.id == column_id)
+        )
+        return result.scalar_one_or_none()
+
     async def update(self, column_id: int, update_data: dict) -> TaskColumn | None:
         await self.session.execute(
             update(TaskColumn)

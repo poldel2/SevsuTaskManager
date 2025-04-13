@@ -37,7 +37,10 @@ async def get_notification_service(
 async def get_activity_service(
     db: AsyncSession = Depends(get_db)
 ) -> ActivityService:
-    return ActivityService(ActivityRepository(db))
+    activity_repo = ActivityRepository(db)
+    user_repo = UserRepository(db)
+    column_repo = TaskColumnRepository(db)
+    return ActivityService(activity_repo, user_repo, column_repo)
 
 async def get_project_service(
     session: AsyncSession = Depends(get_db),

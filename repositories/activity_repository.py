@@ -1,5 +1,5 @@
 from datetime import datetime
-from sqlalchemy import select
+from sqlalchemy import select, and_
 from sqlalchemy.ext.asyncio import AsyncSession
 from models.domain.project_activities import ProjectActivity
 from typing import List, Optional, Dict, Any
@@ -41,16 +41,24 @@ class ActivityRepository:
         self,
         project_id: int,
         limit: int = 50,
-        offset: int = 0
+        offset: int = 0,
+        start_date: datetime = None,
+        end_date: datetime = None,
+        action: str = None
     ) -> List[ProjectActivity]:
-        query = select(ProjectActivity).where(
-            ProjectActivity.project_id == project_id
-        ).order_by(ProjectActivity.created_at.desc())
-        
-        if limit:
-            query = query.limit(limit)
-        if offset:
-            query = query.offset(offset)
-            
+        query = select(ProjectActivity).where(ProjectActivity.project_id == project_id)
+
+        if start_date and end_date:
+            query = query.where(and_(
+                ProjectActivity.created_at >= start_date,
+                ProjectActivity.created_at <= end_date
+            ))
+
+        if action:
+            query = query.where(ProjectActivity.action == action)
+
+        query = query.order_by(ProjectActivity.created_at.desc())
+        query = query.offset(offset).limit(limit)
+
         result = await self.session.execute(query)
         return result.scalars().all()

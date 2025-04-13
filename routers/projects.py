@@ -1,6 +1,7 @@
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.ext.asyncio import AsyncSession
-from typing import List
+from typing import List, Optional
+from datetime import datetime
 
 from core.db import get_db
 from models.schemas.activities import ActivityResponse
@@ -10,7 +11,7 @@ from repositories.activity_repository import ActivityRepository
 
 from models.domain.users import User
 from models.schemas.projects import ProjectCreate, ProjectUpdate, Project
-from dependencies import get_project_service, get_task_column_service, get_grading_service
+from dependencies import get_project_service, get_task_column_service, get_grading_service, get_activity_service
 from core.security import get_current_user
 from models.schemas.task_columns import TaskColumnUpdate, TaskColumnCreate, TaskColumn
 from models.schemas.users import UserResponse
@@ -172,20 +173,22 @@ async def set_participant_manual_grade(
     await grading_service.set_manual_grade(user_id, project_id, grade)
     return {"message": f"Manual grade set to {grade}"}
 
-@router.get("/projects/{project_id}/activities", response_model=List[ActivityResponse])
+@router.get("/{project_id}/activities", response_model=List[ActivityResponse])
 async def get_project_activities(
     project_id: int,
-    limit: int = 50,
     offset: int = 0,
-    current_user = Depends(get_current_user),
-    db: AsyncSession = Depends(get_db)
+    limit: int = 50,
+    start_date: Optional[datetime] = None,
+    end_date: Optional[datetime] = None,
+    action: Optional[str] = None,
+    service: ActivityService = Depends(get_activity_service),
+    current_user: dict = Depends(get_current_user)
 ):
-    await project_service.check_project_access(project_id, current_user.id)
-    
-    activity_service = ActivityService(ActivityRepository(db))
-    activities = await activity_service.get_project_activities(
+    return await service.get_project_activities(
         project_id=project_id,
+        offset=offset,
         limit=limit,
-        offset=offset
+        start_date=start_date,
+        end_date=end_date,
+        action=action
     )
-    return activities

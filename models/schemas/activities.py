@@ -1,6 +1,7 @@
 from pydantic import BaseModel
 from datetime import datetime
 from typing import Optional, Dict, Any
+from models.schemas.users import UserResponse
 
 class ActivityResponse(BaseModel):
     id: int
@@ -11,6 +12,8 @@ class ActivityResponse(BaseModel):
     action: str
     changes: Optional[Dict[str, Any]]
     created_at: datetime
+    user: Optional[UserResponse] = None
+    formatted_message: Optional[str] = None
     
     class Config:
         from_attributes = True
