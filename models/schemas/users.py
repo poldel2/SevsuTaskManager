@@ -21,20 +21,15 @@ class UserResponse(BaseModel):
     is_teacher: bool = False
     project_roles: dict[int, str] = {}
 
-    class Config:
-        from_attributes = True
+    model_config = {"from_attributes": True}
         
     @classmethod
     def model_validate(cls, obj):
         data = obj.__dict__.copy()
-        
         data["is_teacher"] = getattr(obj, 'is_teacher', False)
-        
         data["project_roles"] = {}
         
         try:
-
-            
             session = object_session(obj)
             if session:
                 role_records = session.query(

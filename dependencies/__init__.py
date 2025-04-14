@@ -47,7 +47,8 @@ async def get_project_service(
     notification_service: NotificationService = Depends(get_notification_service)
 ) -> ProjectService:
     project_repo = ProjectRepository(session)
-    return ProjectService(project_repo, notification_service)
+    column_repo = TaskColumnRepository(session)
+    return ProjectService(project_repo, notification_service, column_repo)
 
 async def get_sprint_service(
     session: AsyncSession = Depends(get_db)

@@ -39,8 +39,8 @@ class TaskResponse(TaskBase):
     assignee_name: Optional[str] = None
     column_name: Optional[str] = None
     feedback: Optional[str] = None
-    class Config:
-        from_attributes = True
+    
+    model_config = {"from_attributes": True}
 
     @classmethod
     def model_validate(cls, obj):

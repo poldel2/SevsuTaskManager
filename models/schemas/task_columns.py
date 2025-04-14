@@ -17,5 +17,4 @@ class TaskColumn(TaskColumnBase):
     id: int
     project_id: int
 
-    class Config:
-        from_attributes = True
+    model_config = {"from_attributes": True}

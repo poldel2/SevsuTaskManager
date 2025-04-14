@@ -11,8 +11,6 @@ class MessageResponse(BaseModel):
     sender_id: int
     content: str
     created_at: datetime
-    sender_name: Optional[str] = None  # Имя отправителя
+    sender_name: Optional[str] = None
 
-    class Config:
-        orm_mode = True
-        from_attributes=True
+    model_config = {"from_attributes": True}

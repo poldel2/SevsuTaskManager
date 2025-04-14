@@ -15,10 +15,12 @@ class ProjectService:
     def __init__(
         self,
         project_repository: ProjectRepository,
-        notification_service: NotificationService
+        notification_service: NotificationService,
+        column_repository: TaskColumnRepository
     ):
         self.repository = project_repository
         self.notification_service = notification_service
+        self.column_repo = column_repository
 
     async def create_project(self, project_data: dict, owner_id: int) -> Project:
         project = await self.repository.create({

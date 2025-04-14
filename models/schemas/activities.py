@@ -15,5 +15,4 @@ class ActivityResponse(BaseModel):
     user: Optional[UserResponse] = None
     formatted_message: Optional[str] = None
     
-    class Config:
-        from_attributes = True
+    model_config = {"from_attributes": True}

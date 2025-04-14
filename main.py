@@ -6,10 +6,18 @@ from core.scheduler import setup_scheduler
 from core.logging.config import setup_logging
 from core.logging.middleware.request_logging import RequestLoggingMiddleware
 from routers import router
+from contextlib import asynccontextmanager
 
-setup_logging()
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    setup_scheduler()
+    setup_logging()
+    yield
 
-app = FastAPI()
+
+# setup_logging()
+
+app = FastAPI(lifespan = lifespan)
 
 app.add_middleware(RequestLoggingMiddleware)
 
@@ -27,9 +35,9 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-@app.on_event("startup")
-async def start_scheduler():
-    setup_scheduler()
+# @app.on_event("startup")
+# async def start_scheduler():
+#     setup_scheduler()
 
 if __name__ == "__main__":
     uvicorn.run(app, host="0.0.0.0", port=8000)
