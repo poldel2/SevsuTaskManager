@@ -74,7 +74,7 @@ async def add_user_to_project(
     await service.add_user_to_project(project_id, user_id, role, current_user.id)  # TODO:: заменить на current_user.id
     return {"message": f"User {user_id} added to project {project_id} with role {role}"}
 
-@router.delete("/{project_id}/users/{user_id}")
+@router.delete("/{project_id}/users/{user_id}", status_code=status.HTTP_204_NO_CONTENT)
 async def remove_user_from_project(
     project_id: int,
     user_id: int,
@@ -82,7 +82,6 @@ async def remove_user_from_project(
     current_user: dict = Depends(get_current_user)
 ):
     await service.remove_user_from_project(project_id, user_id, current_user.id)  # TODO:: заменить на current_user.id
-    return {"message": f"User {user_id} removed from project {project_id}"}
 
 @router.get("/{project_id}/users", response_model=list[UserResponse])
 async def get_project_users(

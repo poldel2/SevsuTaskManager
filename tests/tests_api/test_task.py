@@ -2,42 +2,16 @@ import pytest
 from httpx import AsyncClient
 from datetime import datetime, timedelta
 from models.domain.tasks import TaskStatus, TaskGrade
-
-TEST_USER = {
-    "email": "test@test.com",
-    "password": "test123",
-    "first_name": "Test",
-    "last_name": "User"
-}
-
-TEST_PROJECT = {
-    "title": "Test Project",
-    "description": "Test Description"
-}
+from .test_fixtures import auth_headers, project_id, TEST_PROJECT
 
 TEST_TASK = {
     "title": "Test Task",
-    "description": "Test Description",
+    "description": "Test Description", 
     "status": TaskStatus.TODO.value,
     "priority": "medium",
     "grade": TaskGrade.MEDIUM.value,
     "due_date": (datetime.now() + timedelta(days=7)).isoformat()
 }
-
-@pytest.fixture
-async def auth_headers(client: AsyncClient):
-    await client.post("/register", json=TEST_USER)
-    response = await client.post("/login/local", json={
-        "email": TEST_USER["email"],
-        "password": TEST_USER["password"]
-    })
-    token = response.json()["access_token"]
-    return {"Authorization": f"Bearer {token}"}
-
-@pytest.fixture
-async def project_id(client: AsyncClient, auth_headers):
-    response = await client.post("/projects/", json=TEST_PROJECT, headers=auth_headers)
-    return response.json()["id"]
 
 @pytest.fixture
 async def sprint_id(client: AsyncClient, auth_headers, project_id):
