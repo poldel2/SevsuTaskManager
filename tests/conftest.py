@@ -1,24 +1,21 @@
 import pytest
 import asyncio
+import sys
+from unittest.mock import MagicMock
 from typing import AsyncGenerator
 from httpx import AsyncClient, ASGITransport
 from sqlalchemy.ext.asyncio import create_async_engine, AsyncSession, async_sessionmaker
 from sqlalchemy.orm import declarative_base
 from core.db import Base, get_db
-import sys
-from unittest.mock import MagicMock
 
-# Отключаем логирование для тестов
 sys.modules['core.logging.config'] = MagicMock()
 
 from main import app
 
 TEST_DATABASE_URL = "postgresql+asyncpg://testuser:testpass@localhost:5434/testdb"
 
-engine_test = create_async_engine(
-    TEST_DATABASE_URL,
-    echo=False
-)
+
+engine_test = create_async_engine(TEST_DATABASE_URL)
 async_session_maker = async_sessionmaker(engine_test, class_=AsyncSession, expire_on_commit=False)
 Base.metadata.bind = engine_test
 

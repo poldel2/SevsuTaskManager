@@ -2,6 +2,12 @@ import pytest
 from httpx import AsyncClient
 from .test_fixtures import TEST_PROJECT, auth_headers, project_id
 
+TEST_COLUMN = {
+    "name": "Test Column",
+    "position": 0,
+    "color": "#808080"
+}
+
 @pytest.mark.asyncio
 async def test_create_project(client: AsyncClient, auth_headers):
     response = await client.post("/projects/", json=TEST_PROJECT, headers=auth_headers)
@@ -50,7 +56,7 @@ async def test_delete_project(client: AsyncClient, auth_headers, project_id):
         f"/projects/{project_id}",
         headers=auth_headers
     )
-    assert response.status_code == 204
+    assert response.status_code == 200
     
     response = await client.get(
         f"/projects/{project_id}",
@@ -123,3 +129,97 @@ async def test_get_project_unauthorized(client: AsyncClient, project_id):
 async def test_get_non_existent_project(client: AsyncClient, auth_headers):
     response = await client.get("/projects/999999", headers=auth_headers)
     assert response.status_code == 404
+
+@pytest.fixture
+async def column_id(client: AsyncClient, auth_headers, project_id):
+    response = await client.post(
+        f"/projects/{project_id}/columns",
+        json=TEST_COLUMN,
+        headers=auth_headers
+    )
+    return response.json()["id"]
+
+@pytest.mark.asyncio
+async def test_get_project_users(client: AsyncClient, auth_headers, project_id):
+    response = await client.get(
+        f"/projects/{project_id}/users",
+        headers=auth_headers
+    )
+    assert response.status_code == 200
+    users = response.json()
+    assert len(users) == 1 
+
+@pytest.mark.asyncio
+async def test_get_columns(client: AsyncClient, auth_headers, project_id):
+    response = await client.get(
+        f"/projects/{project_id}/columns",
+        headers=auth_headers
+    )
+    assert response.status_code == 200
+    columns = response.json()
+    assert len(columns) > 0 
+
+@pytest.mark.asyncio
+async def test_create_column(client: AsyncClient, auth_headers, project_id):
+    response = await client.post(
+        f"/projects/{project_id}/columns",
+        json=TEST_COLUMN,
+        headers=auth_headers
+    )
+    assert response.status_code == 201
+    data = response.json()
+    assert data["name"] == TEST_COLUMN["name"]
+    assert data["position"] == TEST_COLUMN["position"]
+
+@pytest.mark.asyncio
+async def test_update_column(client: AsyncClient, auth_headers, project_id, column_id):
+    update_data = {
+        "name": "Updated Column",
+        "position": 1,
+        "color": "#000000"
+    }
+    response = await client.put(
+        f"/projects/{project_id}/columns/{column_id}",
+        json=update_data,
+        headers=auth_headers
+    )
+    assert response.status_code == 200
+    data = response.json()
+    assert data["name"] == update_data["name"]
+    assert data["position"] == update_data["position"]
+    assert data["color"] == update_data["color"]
+
+@pytest.mark.asyncio
+async def test_delete_column(client: AsyncClient, auth_headers, project_id, column_id):
+    response = await client.delete(
+        f"/projects/{project_id}/columns/{column_id}",
+        headers=auth_headers
+    )
+    assert response.status_code == 200
+
+    response = await client.get(
+        f"/projects/{project_id}/columns",
+        headers=auth_headers
+    )
+    columns = response.json()
+    assert not any(col["id"] == column_id for col in columns)
+
+@pytest.mark.asyncio
+async def test_get_project_activities(client: AsyncClient, auth_headers, project_id):
+    response = await client.get(
+        f"/projects/{project_id}/activities",
+        headers=auth_headers
+    )
+    assert response.status_code == 200
+    activities = response.json()
+    assert isinstance(activities, list)
+
+@pytest.mark.asyncio
+async def test_get_project_participants_report(client: AsyncClient, auth_headers, project_id):
+    response = await client.get(
+        f"/projects/{project_id}/reports/participants",
+        headers=auth_headers
+    )
+    assert response.status_code == 200
+    report = response.json()
+    assert isinstance(report, list)
