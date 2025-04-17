@@ -21,7 +21,6 @@ def setup_scheduler():
     """Настройка планировщика задач"""
     scheduler = AsyncIOScheduler()
     
-    # Запуск очистки уведомлений каждый день в 03:00
     scheduler.add_job(
         cleanup_notifications,
         CronTrigger(hour=3, minute=0),

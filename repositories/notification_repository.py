@@ -1,4 +1,4 @@
-from sqlalchemy import select, update, and_, delete, or_
+from sqlalchemy import select, update, and_, delete, or_, text
 from sqlalchemy.ext.asyncio import AsyncSession
 from datetime import datetime, timedelta
 from models.domain.notifications import Notification
@@ -10,7 +10,7 @@ class NotificationRepository:
         self.session = session
 
     async def create(self, notification: NotificationCreate) -> Notification:
-        db_notification = Notification(**notification.dict())
+        db_notification = Notification(**notification.model_dump())
         self.session.add(db_notification)
         await self.session.commit()
         await self.session.refresh(db_notification)

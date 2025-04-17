@@ -12,6 +12,7 @@ from services.auth_service import AuthService
 from services.grading_service import GradingService
 from services.message_service import MessageService
 from services.notification_service import NotificationService
+from services.notification_manager import NotificationManager
 from services.project_service import ProjectService
 from services.sprint_service import SprintService
 from services.task_column_service import TaskColumnService
@@ -19,6 +20,11 @@ from services.task_service import TaskService
 from services.activity_service import ActivityService
 from core.db import get_db
 from sqlalchemy.ext.asyncio import AsyncSession
+
+_notification_manager = NotificationManager()
+
+def get_notification_manager() -> NotificationManager:
+    return _notification_manager
 
 async def get_auth_service(
     session: AsyncSession = Depends(get_db)
@@ -29,10 +35,11 @@ async def get_notification_repository(db: AsyncSession = Depends(get_db)):
     return NotificationRepository(db)
 
 async def get_notification_service(
-    session: AsyncSession = Depends(get_db)
+    session: AsyncSession = Depends(get_db),
+    manager: NotificationManager = Depends(get_notification_manager)
 ) -> NotificationService:
     notification_repo = NotificationRepository(session)
-    return NotificationService(notification_repo)
+    return NotificationService(notification_repo, manager)
 
 async def get_activity_service(
     db: AsyncSession = Depends(get_db)
@@ -59,7 +66,7 @@ async def get_sprint_service(
 
 async def get_task_service(
     session: AsyncSession = Depends(get_db),
-    notification_service: NotificationService = Depends(get_notification_service),
+    notification_observer: NotificationService = Depends(get_notification_service),
     activity_service: ActivityService = Depends(get_activity_service)
 ) -> TaskService:
     task_repo = TaskRepository(session)
@@ -72,8 +79,8 @@ async def get_task_service(
         task_repo, 
         project_repo, 
         sprint_repo, 
-        grading_service, 
-        notification_service,
+        grading_service,
+        notification_observer,
         activity_service
     )
 

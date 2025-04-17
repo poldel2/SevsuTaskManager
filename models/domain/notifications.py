@@ -1,5 +1,5 @@
 from enum import Enum
-from sqlalchemy import Column, Integer, String, JSON, ForeignKey, Boolean, DateTime
+from sqlalchemy import Column, Integer, String, JSON, ForeignKey, Boolean, DateTime, Index
 from sqlalchemy.orm import relationship
 from datetime import datetime
 from core.db import Base
@@ -26,6 +26,11 @@ class Notification(Base):
     notification_metadata = Column(JSON, nullable=True)
     
     user = relationship("User", back_populates="notifications")
+
+    __table_args__ = (
+        Index('ix_notifications_user_created', user_id, created_at), 
+        Index('ix_notifications_created_at', created_at.desc()),    
+    )
 
     def __repr__(self):
         return f"<Notification(id={self.id}, type={self.type}, user_id={self.user_id})>"
