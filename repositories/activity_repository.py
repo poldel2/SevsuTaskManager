@@ -1,5 +1,5 @@
 from datetime import datetime
-from sqlalchemy import select, and_
+from sqlalchemy import select, and_, func
 from sqlalchemy.ext.asyncio import AsyncSession
 from models.domain.project_activities import ProjectActivity
 from typing import List, Optional, Dict, Any
@@ -62,3 +62,26 @@ class ActivityRepository:
 
         result = await self.session.execute(query)
         return result.scalars().all()
+
+    async def count_project_activities(
+        self,
+        project_id: int,
+        start_date: datetime = None,
+        end_date: datetime = None,
+        action: str = None
+    ) -> int:
+        conditions = [ProjectActivity.project_id == project_id]
+
+        if start_date and end_date:
+            conditions.append(and_(
+                ProjectActivity.created_at >= start_date,
+                ProjectActivity.created_at <= end_date
+            ))
+
+        if action:
+            conditions.append(ProjectActivity.action == action)
+
+        result = await self.session.execute(
+            select(func.count()).select_from(ProjectActivity).where(and_(*conditions))
+        )
+        return result.scalar_one()

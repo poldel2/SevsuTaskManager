@@ -172,7 +172,7 @@ async def set_participant_manual_grade(
     await grading_service.set_manual_grade(user_id, project_id, grade)
     return {"message": f"Manual grade set to {grade}"}
 
-@router.get("/{project_id}/activities", response_model=List[ActivityResponse])
+@router.get("/{project_id}/activities")
 async def get_project_activities(
     project_id: int,
     offset: int = 0,

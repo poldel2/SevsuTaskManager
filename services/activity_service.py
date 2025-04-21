@@ -54,11 +54,18 @@ class ActivityService:
         start_date: datetime = None,
         end_date: datetime = None,
         action: str = None
-    ) -> List[ActivityResponse]:
+    ):
         activities = await self.repository.get_project_activities(
             project_id=project_id,
             limit=limit,
             offset=offset,
+            start_date=start_date,
+            end_date=end_date,
+            action=action
+        )
+        
+        total = await self.repository.count_project_activities(
+            project_id=project_id,
             start_date=start_date,
             end_date=end_date,
             action=action
@@ -75,7 +82,7 @@ class ActivityService:
             
             formatted_activities.append(ActivityResponse(**activity_dict))
             
-        return formatted_activities
+        return {"items": formatted_activities, "total": total}
 
     async def _format_activity_message(self, activity) -> str:
         """Форматирует сообщение об активности в человекочитаемый вид"""

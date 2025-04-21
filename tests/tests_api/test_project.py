@@ -211,8 +211,11 @@ async def test_get_project_activities(client: AsyncClient, auth_headers, project
         headers=auth_headers
     )
     assert response.status_code == 200
-    activities = response.json()
-    assert isinstance(activities, list)
+    data = response.json()
+    assert "items" in data
+    assert "total" in data
+    assert isinstance(data["items"], list)
+    assert isinstance(data["total"], int)
 
 @pytest.mark.asyncio
 async def test_get_project_participants_report(client: AsyncClient, auth_headers, project_id):
