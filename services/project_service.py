@@ -1,6 +1,7 @@
 from typing import Optional, Sequence
 from sqlalchemy.ext.asyncio import AsyncSession
-from fastapi import HTTPException, status
+from fastapi import HTTPException, status, UploadFile
+from io import BytesIO
 
 from models.domain.projects import Project
 from models.schemas.projects import ProjectCreate, ProjectUpdate
@@ -9,6 +10,8 @@ from repositories.project_repository import ProjectRepository
 from repositories.task_column_repository import TaskColumnRepository
 from models.domain.users import User
 from services.notification_service import NotificationService
+from core.storage.service import StorageService
+from core.storage.utils import validate_file_type, validate_file_size, get_safe_filename
 
 
 class ProjectService:
@@ -16,14 +19,24 @@ class ProjectService:
         self,
         project_repository: ProjectRepository,
         notification_service: NotificationService,
-        column_repository: TaskColumnRepository
+        column_repository: TaskColumnRepository,
+        storage_service: StorageService
     ):
-        self.repository = project_repository
+        self.project_repo = project_repository
         self.notification_service = notification_service
         self.column_repo = column_repository
+        self.storage_service = storage_service
+
+    async def validate_project_access(self, project_id: int, user_id: int):
+        project = await self.project_repo.get_by_id(project_id)
+        if not project or project.owner_id != user_id:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="No access to project"
+            )
 
     async def create_project(self, project_data: dict, owner_id: int) -> Project:
-        project = await self.repository.create({
+        project = await self.project_repo.create({
             **project_data,
             "owner_id": owner_id
         })
@@ -35,17 +48,17 @@ class ProjectService:
         for column_data in default_columns:
             await self.column_repo.create(column_data)
 
-        await self.repository.add_user_to_project(project.id, owner_id, "OWNER")
+        await self.project_repo.add_user_to_project(project.id, owner_id, "OWNER")
         return project
 
     async def get_user_projects(self, user_id: int) -> Sequence[Project]:
-        projects = await self.repository.get_all_for_user(user_id)
+        projects = await self.project_repo.get_all_for_user(user_id)
         if not projects:
             return []
         return projects
 
     async def get_project(self, project_id: int, user_id: int) -> Optional[Project]:
-        project = await self.repository.get_by_id(project_id)
+        project = await self.project_repo.get_by_id(project_id)
         if not project:
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND,
@@ -61,7 +74,7 @@ class ProjectService:
         return project
 
     async def get_all_projects(self, user_id: int) -> Sequence[Project]:
-        return await self.repository.get_all_for_user(user_id)
+        return await self.project_repo.get_all_for_user(user_id)
 
     async def update_project(
         self,
@@ -76,7 +89,7 @@ class ProjectService:
                 status_code=status.HTTP_403_FORBIDDEN,
                 detail="Only project owner can update it"
             )
-        return await self.repository.update(project_id, project_data.model_dump(exclude_unset=True))
+        return await self.project_repo.update(project_id, project_data.model_dump(exclude_unset=True))
 
     async def delete_project(self, project_id: int, user_id: int) -> None:
         project = await self.get_project(project_id, user_id)
@@ -86,7 +99,7 @@ class ProjectService:
                 status_code=status.HTTP_403_FORBIDDEN,
                 detail="Only project owner can delete it"
             )
-        await self.repository.delete(project_id)
+        await self.project_repo.delete(project_id)
 
     async def add_user_to_project(
         self,
@@ -95,10 +108,10 @@ class ProjectService:
         role: str,
         inviter_id: int
     ) -> Project:
-        project = await self.repository.add_user_to_project(project_id, user_id, role)
+        project = await self.project_repo.add_user_to_project(project_id, user_id, role)
         
         if project:
-            inviter = await self.repository.get_user(inviter_id)
+            inviter = await self.project_repo.get_user(inviter_id)
             await self.notification_service.notify_team_invitation(
                 user_id=user_id,
                 project_id=project.id,
@@ -121,24 +134,49 @@ class ProjectService:
                 status_code=status.HTTP_400_BAD_REQUEST,
                 detail="Cannot remove project owner"
             )
-        await self.repository.remove_user_from_project(project_id, user_id)
+        await self.project_repo.remove_user_from_project(project_id, user_id)
 
     async def get_project_users(self, project_id: int, user_id: int) -> Sequence[UserResponse]:
         await self.get_project(project_id, user_id)  # Проверка доступа
-        return await self.repository.get_project_users(project_id)
+        return await self.project_repo.get_project_users(project_id)
 
     async def _is_user_project_leader(self, user_id: int, project_id: int) -> bool:
         """
         Check if user is project leader (owner or admin)
         """
-        user = await self.repository.session.get(User, user_id)
+        user = await self.project_repo.session.get(User, user_id)
         if not user:
             return False
         
         # Check if user is project owner
-        project = await self.repository.get_by_id(project_id)
+        project = await self.project_repo.get_by_id(project_id)
         if project and project.owner_id == user_id:
             return True
             
         # Check if user is project admin
         return user.is_project_leader(project_id)
+
+    async def update_project_logo(self, project_id: int, file: UploadFile, user_id: int) -> Project:
+        """Обновляет логотип проекта"""
+        await self.validate_project_access(project_id, user_id)
+        
+        contents = await file.read()
+        if not validate_file_type(contents):
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Invalid file type. Only images are allowed."
+            )
+        
+        if not validate_file_size(len(contents)):
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="File too large. Maximum size is 5MB."
+            )
+
+        safe_filename = get_safe_filename(file.filename)
+        # Создаем новый BytesIO с прочитанными данными
+        file_obj = BytesIO(contents)
+        file_obj.content_type = file.content_type
+        
+        logo_url = await self.storage_service.upload_file(project_id, file_obj, safe_filename)
+        return await self.project_repo.update(project_id, {"logo": logo_url})

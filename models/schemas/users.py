@@ -20,6 +20,7 @@ class UserResponse(BaseModel):
     last_name: Optional[str]
     is_teacher: bool = False
     project_roles: dict[int, str] = {}
+    avatar: Optional[str] = None
 
     model_config = {"from_attributes": True}
         
@@ -54,3 +55,9 @@ class Token(BaseModel):
 class UserLogin(BaseModel):
     email: EmailStr
     password: str
+
+class UserUpdate(BaseModel):
+    first_name: Optional[str] = None
+    last_name: Optional[str] = None
+
+    model_config = {"from_attributes": True}

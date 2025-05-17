@@ -48,11 +48,10 @@ class RequestLoggingMiddleware(BaseHTTPMiddleware):
                 duration = time() - start_time
                 self._update_metrics(path, duration)
                 
-                if duration > 1.0:  # Логируем медленные запросы как WARNING
+                if duration > 1.0:
                     log_level = logging.WARNING
-                
-                logger.log(
-                    log_level,
+                logger.info(
+                    # log_level,
                     f"{method} {path}",
                     extra={
                         "request": {

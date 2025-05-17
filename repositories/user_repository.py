@@ -1,7 +1,7 @@
 import datetime
 
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy import select, update
+from sqlalchemy import select, update, func
 from passlib.context import CryptContext
 from typing import Optional, Sequence
 
@@ -67,3 +67,28 @@ class UserRepository:
             .values(is_active=False)
         )
         await self.session.commit()
+
+    async def search_users(self, query: str) -> Sequence[UserResponse]:
+        search_pattern = f"%{query}%"
+        stmt = select(User).where(
+            (func.lower(User.first_name).like(func.lower(search_pattern))) |
+            (func.lower(User.last_name).like(func.lower(search_pattern))) |
+            (func.lower(User.email).like(func.lower(search_pattern)))
+        )
+        result = await self.session.execute(stmt)
+        users = result.scalars().all()
+        return [UserResponse.model_validate(user) for user in users]
+
+    async def update(self, user_id: int, data: dict) -> User:
+        """Обновляет данные пользователя"""
+        stmt = select(User).where(User.id == user_id)
+        result = await self.session.execute(stmt)
+        user = result.scalar_one_or_none()
+        
+        if user:
+            for key, value in data.items():
+                setattr(user, key, value)
+            await self.session.commit()
+            await self.session.refresh(user)
+        
+        return user

@@ -32,7 +32,7 @@ class TaskService:
         self.notification_observer = notification_observer
         self.activity_service = activity_service
 
-    async def _validate_project_access(self, project_id: int, user_id: int):
+    async def validate_project_access(self, project_id: int, user_id: int):
         project = await self.project_repository.get_by_id(project_id)
         if not project or project.owner_id != user_id:
             raise HTTPException(
@@ -41,7 +41,7 @@ class TaskService:
             )
 
     async def create_task(self, task_data: dict, user_id: int) -> TaskResponse:
-        await self._validate_project_access(task_data["project_id"], user_id)
+        await self.validate_project_access(task_data["project_id"], user_id)
 
         if task_data.get("sprint_id"):
             sprint = await self.sprint_repository.get_by_id(task_data["sprint_id"])
@@ -92,11 +92,11 @@ class TaskService:
         if not task:
             raise HTTPException(status_code=404, detail="Task not found")
 
-        await self._validate_project_access(task.project_id, user_id)
+        await self.validate_project_access(task.project_id, user_id)
         return TaskResponse.model_validate(task)
 
     async def get_tasks_by_project(self, project_id: int, user_id: int) -> list[TaskResponse]:
-        await self._validate_project_access(project_id, user_id)
+        await self.validate_project_access(project_id, user_id)
         tasks = await self.task_repository.get_tasks_by_project(project_id)
         return [TaskResponse.model_validate(task) for task in tasks]
 
@@ -105,7 +105,7 @@ class TaskService:
         if not sprint:
             raise HTTPException(status_code=404, detail="Sprint not found")
 
-        await self._validate_project_access(sprint.project_id, user_id)
+        await self.validate_project_access(sprint.project_id, user_id)
         tasks = await self.task_repository.get_tasks_by_sprint(sprint_id)
         return [TaskResponse.model_validate(task) for task in tasks]
 

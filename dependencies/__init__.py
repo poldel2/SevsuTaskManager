@@ -1,6 +1,7 @@
 from fastapi import Depends
 from repositories.grading_repository import GradingRepository
 from repositories.project_repository import ProjectRepository
+from repositories.report_repository import ReportRepository
 from repositories.sprint_repository import SprintRepository
 from repositories.task_column_repository import TaskColumnRepository
 from repositories.task_repository import TaskRepository
@@ -14,17 +15,24 @@ from services.message_service import MessageService
 from services.notification_service import NotificationService
 from services.notification_manager import NotificationManager
 from services.project_service import ProjectService
+from services.report_service import ReportService
 from services.sprint_service import SprintService
 from services.task_column_service import TaskColumnService
 from services.task_service import TaskService
 from services.activity_service import ActivityService
+from services.user_service import UserService
 from core.db import get_db
+from core.storage.service import StorageService
 from sqlalchemy.ext.asyncio import AsyncSession
 
 _notification_manager = NotificationManager()
+_storage_service = StorageService()
 
 def get_notification_manager() -> NotificationManager:
     return _notification_manager
+
+def get_storage_service() -> StorageService:
+    return _storage_service
 
 async def get_auth_service(
     session: AsyncSession = Depends(get_db)
@@ -51,11 +59,12 @@ async def get_activity_service(
 
 async def get_project_service(
     session: AsyncSession = Depends(get_db),
-    notification_service: NotificationService = Depends(get_notification_service)
+    notification_service: NotificationService = Depends(get_notification_service),
+    storage_service: StorageService = Depends(get_storage_service)
 ) -> ProjectService:
     project_repo = ProjectRepository(session)
     column_repo = TaskColumnRepository(session)
-    return ProjectService(project_repo, notification_service, column_repo)
+    return ProjectService(project_repo, notification_service, column_repo, storage_service)
 
 async def get_sprint_service(
     session: AsyncSession = Depends(get_db)
@@ -104,3 +113,17 @@ def get_grading_service(
 ) -> GradingService:
     grading_repo = GradingRepository(session)
     return GradingService(grading_repo)
+
+def get_report_service(
+    session: AsyncSession = Depends(get_db),
+    project_service: ProjectService = Depends(get_project_service),
+) -> ReportService:
+    report_repo = ReportRepository(session)
+    return ReportService(report_repo, project_service)
+
+async def get_user_service(
+    session: AsyncSession = Depends(get_db),
+    storage_service: StorageService = Depends(get_storage_service)
+) -> UserService:
+    user_repo = UserRepository(session)
+    return UserService(user_repo, storage_service)

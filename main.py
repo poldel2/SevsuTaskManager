@@ -1,7 +1,10 @@
 import random
 from fastapi import FastAPI
+from fastapi.exceptions import RequestValidationError
 from fastapi.middleware.cors import CORSMiddleware
 import uvicorn
+
+from core.handlers.exception_handlers import validation_exception_handler
 from core.scheduler import setup_scheduler
 from core.logging.config import setup_logging
 from core.logging.middleware.request_logging import RequestLoggingMiddleware
@@ -20,6 +23,7 @@ async def lifespan(app: FastAPI):
 app = FastAPI(lifespan = lifespan)
 
 app.add_middleware(RequestLoggingMiddleware)
+app.add_exception_handler(RequestValidationError, validation_exception_handler)
 
 app.include_router(router)
 

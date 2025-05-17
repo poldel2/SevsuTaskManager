@@ -9,6 +9,7 @@ class Project(Base):
     id = Column(Integer, primary_key=True, index=True)
     title = Column(String(100), nullable=False)
     description = Column(String(500))
+    logo = Column(String(500))
     start_date = Column(DateTime(timezone=True), default=func.now())
     end_date = Column(DateTime(timezone=True))
     owner_id = Column(Integer, ForeignKey("users.id"), nullable=False)
@@ -21,3 +22,4 @@ class Project(Base):
     columns = relationship("TaskColumn", back_populates="project")
     user_progress = relationship("UserProjectProgress", back_populates="project")
     activities = relationship("ProjectActivity", back_populates="project", cascade="all, delete-orphan")
+    reports = relationship("Report", back_populates="project")

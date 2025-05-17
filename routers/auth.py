@@ -1,11 +1,14 @@
 from fastapi import APIRouter, Depends, Request
 from starlette import status
 
-from dependencies import get_auth_service
+from dependencies import get_auth_service, get_user_service
 from services.auth_service import AuthService
+from services.user_service import UserService
 from models.schemas.users import Token, UserResponse, UserCreate, UserLogin
+from models.domain.users import User
 from core.config.settings import settings
-from core.security import get_current_user, oauth2_scheme  # Импортируем из security
+from core.security import get_current_user, oauth2_scheme
+from repositories.user_repository import UserRepository
 
 router = APIRouter(tags=["Authentication"])
 
@@ -54,3 +57,14 @@ async def logout(
 ):
     await auth_service.revoke_token(token)
     return {"message": "Logged out successfully"}
+
+@router.get("/users/search", response_model=list[UserResponse])
+async def search_users(
+    q: str,
+    user_service: UserService = Depends(get_user_service),
+    current_user: User = Depends(get_current_user)
+):
+    """
+    Поиск пользователей по имени, фамилии или email
+    """
+    return await user_service.search_users(q)

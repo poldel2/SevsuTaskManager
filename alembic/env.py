@@ -14,6 +14,7 @@ from models.domain.task_columns import TaskColumn
 from models.domain.tokens import Token
 from models.domain.notifications import Notification
 from models.domain.project_activities import ProjectActivity
+from models.domain.reports import Report
 
 config = context.config
 target_metadata = user_project_table.metadata

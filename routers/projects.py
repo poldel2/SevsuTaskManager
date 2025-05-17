@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, status, UploadFile, File
 from sqlalchemy.ext.asyncio import AsyncSession
 from typing import List, Optional
 from datetime import datetime
@@ -191,3 +191,12 @@ async def get_project_activities(
         end_date=end_date,
         action=action
     )
+
+@router.post("/{project_id}/logo")
+async def upload_project_logo(
+    project_id: int,
+    file: UploadFile = File(...),
+    service: ProjectService = Depends(get_project_service),
+    current_user: dict = Depends(get_current_user)
+):
+    return await service.update_project_logo(project_id, file, current_user.id)

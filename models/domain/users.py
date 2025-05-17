@@ -16,6 +16,7 @@ class User(Base):
     middle_name = Column(String)
     group = Column(String)
     hashed_password = Column(String, nullable=True)
+    avatar = Column(String, nullable=True)
 
     projects_owned = relationship("Project", back_populates="owner")
     tasks = relationship("Task", back_populates="assignee")
