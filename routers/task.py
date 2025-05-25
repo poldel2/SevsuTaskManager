@@ -185,3 +185,45 @@ async def get_related_tasks(
     """Получение связанных задач из того же проекта и спринта"""
     return await service.get_related_tasks(task_id, current_user.id)
 
+
+@router.post("/{task_id}/relations", response_model=TaskResponse)
+async def create_task_relation(
+    project_id: int,
+    task_id: int,
+    target_task_id: int,
+    relation_type: str,
+    service: TaskService = Depends(get_task_service),
+    current_user: dict = Depends(get_current_user)
+):
+    return await service.create_task_relation(task_id, target_task_id, relation_type, current_user.id)
+
+@router.delete("/{task_id}/relations/{target_task_id}")
+async def delete_task_relation(
+    project_id: int,
+    task_id: int,
+    target_task_id: int,
+    service: TaskService = Depends(get_task_service),
+    current_user: dict = Depends(get_current_user)
+):
+    await service.delete_task_relation(task_id, target_task_id, current_user.id)
+    return {"message": "Relation deleted"}
+
+@router.get("/{task_id}/relations", response_model=list[TaskResponse])
+async def get_task_relations(
+    project_id: int,
+    task_id: int,
+    relation_type: str | None = None,
+    service: TaskService = Depends(get_task_service),
+    current_user: dict = Depends(get_current_user)
+):
+    return await service.get_task_relations(task_id, relation_type, current_user.id)
+
+@router.get("/{task_id}/parent", response_model=TaskResponse | None)
+async def get_parent_task(
+    project_id: int,
+    task_id: int,
+    service: TaskService = Depends(get_task_service),
+    current_user: dict = Depends(get_current_user)
+):
+    return await service.get_parent_task(task_id, current_user.id)
+

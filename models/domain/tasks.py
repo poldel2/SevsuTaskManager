@@ -25,6 +25,12 @@ class TaskGrade(str, Enum):
     HARD = "hard"
 
 
+class TaskRelationType(str, Enum):
+    RELATED = "related"
+    PARENT = "parent"
+    CHILD = "child"
+
+
 class Task(Base):
     __tablename__ = "tasks"
 
@@ -49,6 +55,21 @@ class Task(Base):
     sprint = relationship("Sprint", back_populates="tasks")
     assignee = relationship("User", back_populates="tasks")
     column = relationship("TaskColumn", back_populates="tasks")
+    source_relations = relationship("TaskRelation", foreign_keys="[TaskRelation.source_task_id]", back_populates="source_task", cascade="all, delete")
+    target_relations = relationship("TaskRelation", foreign_keys="[TaskRelation.target_task_id]", back_populates="target_task", cascade="all, delete")
+
+
+class TaskRelation(Base):
+    __tablename__ = "task_relations"
+
+    id = Column(Integer, primary_key=True)
+    source_task_id = Column(Integer, ForeignKey("tasks.id", ondelete="CASCADE"), nullable=False)
+    target_task_id = Column(Integer, ForeignKey("tasks.id", ondelete="CASCADE"), nullable=False)
+    relation_type = Column(SQLEnum(TaskRelationType), nullable=False)
+    created_at = Column(DateTime(timezone=True), default=datetime.now)
+
+    source_task = relationship("Task", foreign_keys=[source_task_id], back_populates="source_relations")
+    target_task = relationship("Task", foreign_keys=[target_task_id], back_populates="target_relations")
 
 
 class ProjectGradingSettings(Base):

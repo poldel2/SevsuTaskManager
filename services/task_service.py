@@ -3,7 +3,7 @@ from sqlalchemy import select
 from sqlalchemy.orm import selectinload
 
 from models.domain.task_columns import TaskColumn
-from models.domain.tasks import Task, TaskStatus, TaskGrade
+from models.domain.tasks import Task, TaskStatus, TaskGrade, TaskRelationType
 from models.domain.users import User
 from repositories.task_repository import TaskRepository
 from repositories.project_repository import ProjectRepository
@@ -273,3 +273,92 @@ class TaskService:
         await self.validate_project_access(task.project_id, user_id)
         related_tasks = await self.task_repository.get_related_tasks(task_id)
         return [TaskResponse.model_validate(task) for task in related_tasks]
+
+    async def create_task_relation(
+        self, 
+        source_task_id: int,
+        target_task_id: int, 
+        relation_type: str,
+        user_id: int
+    ) -> TaskResponse:
+        source_task = await self.task_repository.get_by_id(source_task_id)
+        target_task = await self.task_repository.get_by_id(target_task_id)
+        
+        if not source_task or not target_task:
+            raise HTTPException(status_code=404, detail="Task not found")
+            
+        if source_task.project_id != target_task.project_id:
+            raise HTTPException(
+                status_code=400,
+                detail="Cannot relate tasks from different projects"
+            )
+        
+        relation = await self.task_repository.create_relation({
+            "source_task_id": source_task_id,
+            "target_task_id": target_task_id,
+            "relation_type": relation_type
+        })
+        
+        if relation_type == TaskRelationType.PARENT:
+            # Создаем обратную связь
+            await self.task_repository.create_relation({
+                "source_task_id": target_task_id,
+                "target_task_id": source_task_id,
+                "relation_type": TaskRelationType.CHILD
+            })
+
+        await self.activity_service.log_activity(
+            project_id=source_task.project_id,
+            user_id=user_id,
+            entity_type=EntityType.TASK,
+            entity_id=source_task_id,
+            action=ActionType.UPDATE,
+            changes={"added_relation": {
+                "type": relation_type,
+                "target_task_id": target_task_id
+            }}
+        )
+        
+        return await self.get_task(source_task_id, user_id)
+
+    async def delete_task_relation(
+        self,
+        source_task_id: int,
+        target_task_id: int,
+        user_id: int
+    ) -> None:
+        # Удаляем связь в обоих направлениях
+        await self.task_repository.delete_relation_by_tasks(source_task_id, target_task_id)
+
+    async def get_task_relations(
+        self,
+        task_id: int,
+        relation_type: str | None,
+        user_id: int
+    ) -> list[TaskResponse]:
+        task = await self.task_repository.get_by_id(task_id)
+        if not task:
+            raise HTTPException(status_code=404, detail="Task not found")
+
+        await self.validate_project_access(task.project_id, user_id)
+        
+        relation_type_enum = TaskRelationType(relation_type) if relation_type else None
+        related_tasks = await self.task_repository.get_task_relations(task_id, relation_type_enum)
+        
+        return [TaskResponse.model_validate(task) for task in related_tasks]
+
+    async def get_parent_task(
+        self,
+        task_id: int,
+        user_id: int
+    ) -> TaskResponse | None:
+        task = await self.task_repository.get_by_id(task_id)
+        if not task:
+            raise HTTPException(status_code=404, detail="Task not found")
+
+        await self.validate_project_access(task.project_id, user_id)
+        
+        parent_task = await self.task_repository.get_parent_task(task_id)
+        if parent_task:
+            return TaskResponse.model_validate(parent_task)
+        return None
