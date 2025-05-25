@@ -174,3 +174,14 @@ async def patch_task(
         current_user.id
     )
 
+
+@router.get("/{task_id}/related", response_model=list[TaskResponse])
+async def get_related_tasks(
+    project_id: int,
+    task_id: int,
+    service: TaskService = Depends(get_task_service),
+    current_user: dict = Depends(get_current_user)
+):
+    """Получение связанных задач из того же проекта и спринта"""
+    return await service.get_related_tasks(task_id, current_user.id)
+

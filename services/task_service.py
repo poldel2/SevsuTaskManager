@@ -264,3 +264,12 @@ class TaskService:
                 status=status
             )
         return task
+
+    async def get_related_tasks(self, task_id: int, user_id: int) -> list[TaskResponse]:
+        task = await self.task_repository.get_by_id(task_id)
+        if not task:
+            raise HTTPException(status_code=404, detail="Task not found")
+
+        await self.validate_project_access(task.project_id, user_id)
+        related_tasks = await self.task_repository.get_related_tasks(task_id)
+        return [TaskResponse.model_validate(task) for task in related_tasks]

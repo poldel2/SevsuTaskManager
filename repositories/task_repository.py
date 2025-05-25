@@ -79,3 +79,24 @@ class TaskRepository:
             delete(Task).where(Task.id == task_id)
         )
         await self.session.commit()
+
+    async def get_related_tasks(self, task_id: int) -> list[Task]:
+        task = await self.get_by_id(task_id)
+        if not task:
+            return []
+            
+        result = await self.session.execute(
+            select(Task)
+            .options(
+                selectinload(Task.project),
+                selectinload(Task.sprint),
+                selectinload(Task.assignee),
+                selectinload(Task.column),
+            )
+            .where(
+                Task.project_id == task.project_id,
+                Task.sprint_id == task.sprint_id,
+                Task.id != task_id
+            )
+        )
+        return result.scalars().all()
