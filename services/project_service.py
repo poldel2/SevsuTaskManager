@@ -8,7 +8,9 @@ from models.schemas.projects import ProjectCreate, ProjectUpdate
 from models.schemas.users import UserResponse
 from repositories.project_repository import ProjectRepository
 from repositories.task_column_repository import TaskColumnRepository
+from repositories.user_repository import UserRepository
 from models.domain.users import User
+from models.domain.user_project import Role
 from services.notification_service import NotificationService
 from core.storage.service import StorageService
 from core.storage.utils import validate_file_type, validate_file_size, get_safe_filename
@@ -20,12 +22,14 @@ class ProjectService:
         project_repository: ProjectRepository,
         notification_service: NotificationService,
         column_repository: TaskColumnRepository,
-        storage_service: StorageService
+        storage_service: StorageService,
+        user_repo: UserRepository  
     ):
         self.project_repo = project_repository
         self.notification_service = notification_service
         self.column_repo = column_repository
         self.storage_service = storage_service
+        self.user_repo = user_repo
 
     async def validate_project_access(self, project_id: int, user_id: int):
         project = await self.project_repo.get_by_id(project_id)
@@ -76,6 +80,10 @@ class ProjectService:
     async def get_all_projects(self, user_id: int) -> Sequence[Project]:
         return await self.project_repo.get_all_for_user(user_id)
 
+    async def get_all_public_projects(self, user_id: int) -> Sequence[Project]:
+        projects = await self.get_all_projects(user_id)
+        return [project for project in projects if not project.is_private]
+
     async def update_project(
         self,
         project_id: int,
@@ -108,6 +116,11 @@ class ProjectService:
         role: str,
         inviter_id: int
     ) -> Project:
+        user = await self.user_repo.get_by_id(user_id)
+        
+        if user and user.role == "teacher":
+            role = "TEACHER"
+            
         project = await self.project_repo.add_user_to_project(project_id, user_id, role)
         
         if project:

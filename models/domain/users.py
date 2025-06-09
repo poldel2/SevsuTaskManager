@@ -15,6 +15,7 @@ class User(Base):
     last_name = Column(String)
     middle_name = Column(String)
     group = Column(String)
+    role = Column(String, default="student")  # student, teacher, admin
     hashed_password = Column(String, nullable=True)
     avatar = Column(String, nullable=True)
 

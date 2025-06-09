@@ -1,8 +1,9 @@
 from datetime import datetime
 from enum import Enum
 
-from sqlalchemy import Column, Enum as SQLEnum, Integer, String, DateTime, ForeignKey
+from sqlalchemy import Column, Enum as SQLEnum, Integer, String, DateTime, ForeignKey, Float
 from sqlalchemy.orm import relationship
+from sqlalchemy.sql import func
 from core.db import Base
 
 class TaskStatus(str, Enum):
@@ -31,6 +32,12 @@ class TaskRelationType(str, Enum):
     CHILD = "child"
 
 
+class TaskCompletionStatus(str, Enum):
+    COMPLETED = "completed"
+    PARTIAL = "partial"
+    NOT_COMPLETED = "not_completed"
+
+
 class Task(Base):
     __tablename__ = "tasks"
 
@@ -45,6 +52,8 @@ class Task(Base):
     updated_at = Column(DateTime(timezone=True), default=datetime.now, onupdate=datetime.now)
     due_date = Column(DateTime(timezone=True))
     start_date = Column(DateTime(timezone=True), nullable=True)
+    completion_status = Column(SQLEnum(TaskCompletionStatus), nullable=True)
+    score = Column(Float, nullable=True)
 
     project_id = Column(Integer, ForeignKey("projects.id"), nullable=False)
     sprint_id = Column(Integer, ForeignKey("sprints.id"), nullable=True)
@@ -74,14 +83,15 @@ class TaskRelation(Base):
 
 class ProjectGradingSettings(Base):
     __tablename__ = "project_grading_settings"
-
+    
     id = Column(Integer, primary_key=True)
-    project_id = Column(Integer, ForeignKey("projects.id"), unique=True)
-
-    required_easy_tasks = Column(Integer, default=1)
-    required_medium_tasks = Column(Integer, default=1)
-    required_hard_tasks = Column(Integer, default=1)
-
+    project_id = Column(Integer, ForeignKey('projects.id', ondelete='CASCADE'))
+    required_easy_tasks = Column(Integer, default=0)
+    required_medium_tasks = Column(Integer, default=0)
+    required_hard_tasks = Column(Integer, default=0)
+    
+    created_at = Column(DateTime(timezone=True), server_default=func.now())
+    updated_at = Column(DateTime(timezone=True), onupdate=func.now())
 
 class UserProjectProgress(Base):
     __tablename__ = "user_project_progress"

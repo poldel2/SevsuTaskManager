@@ -13,7 +13,7 @@ class UserService:
         self.storage_service = storage_service
 
     async def search_users(self, query: str) -> Sequence[UserResponse]:
-        return await self.repository.search_users(query)
+        return await self.user_repo.search_users(query)
 
     async def update_avatar(self, user_id: int, file: UploadFile) -> User:
         """Обновляет аватар пользователя"""

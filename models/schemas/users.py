@@ -10,6 +10,7 @@ class UserCreate(BaseModel):
     last_name: Optional[str] = None
     middle_name: Optional[str] = None
     group: Optional[str] = None
+    role: Optional[str] = "student"
     password: str
 
 class UserResponse(BaseModel):
@@ -19,7 +20,9 @@ class UserResponse(BaseModel):
     first_name: Optional[str]
     last_name: Optional[str]
     is_teacher: bool = False
+    group: Optional[str] = None
     project_roles: dict[int, str] = {}
+    role: Optional[str] = "student"
     avatar: Optional[str] = None
 
     model_config = {"from_attributes": True}

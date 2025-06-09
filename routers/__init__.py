@@ -8,6 +8,7 @@ from .notifications import router as notifications_router
 from .report import router as reports_router
 from .media import router as media_router
 from .user import router as users_router
+from .grading import router as grading_router
 
 router = APIRouter()
 
@@ -20,3 +21,4 @@ router.include_router(notifications_router, tags=["notifications"])
 router.include_router(reports_router, tags=["reports"])
 router.include_router(media_router, tags=["media"])
 router.include_router(users_router, tags=["users"])
+router.include_router(grading_router, tags=["grading"])

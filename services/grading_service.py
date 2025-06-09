@@ -1,5 +1,6 @@
 from typing import Optional
-from models.domain.tasks import TaskGrade, TaskStatus
+from models.domain.tasks import TaskGrade, TaskStatus, TaskCompletionStatus
+from models.schemas.tasks import TaskGradeUpdate, ProjectGradingSettings
 from repositories.grading_repository import GradingRepository
 
 class GradingService:
@@ -95,3 +96,77 @@ class GradingService:
             # Update existing progress record
             progress.manual_grade = grade
             await self.grading_repository.session.commit()
+
+    async def get_user_tasks_for_grading(self, project_id: int, user_id: int) -> dict:
+        stats = {
+            'easy_completed': 0,
+            'medium_completed': 0,
+            'hard_completed': 0,
+            'tasks': []
+        }
+        
+        tasks = await self.grading_repository.get_project_tasks_for_user(project_id, user_id)
+        
+        for task in tasks:
+            completion_value = 1.0 if task.completion_status == TaskCompletionStatus.COMPLETED else 0.5 if task.completion_status == TaskCompletionStatus.PARTIAL else 0
+            
+            if task.grade == TaskGrade.EASY:
+                stats['easy_completed'] += completion_value
+            elif task.grade == TaskGrade.MEDIUM:
+                stats['medium_completed'] += completion_value
+            elif task.grade == TaskGrade.HARD:
+                stats['hard_completed'] += completion_value
+            
+            stats['tasks'].append({
+                'id': task.id,
+                'title': task.title,
+                'grade': task.grade,
+                'completion_status': task.completion_status,
+                'project_id': task.project_id
+            })
+        
+        settings = await self.grading_repository.get_grading_settings(project_id)
+        if settings:
+            stats['settings'] = {
+                'required_easy_tasks': settings.required_easy_tasks,
+                'required_medium_tasks': settings.required_medium_tasks,
+                'required_hard_tasks': settings.required_hard_tasks
+            }
+        
+        return stats
+
+    async def update_task_grade(self, task_id: int, grade_data: TaskGradeUpdate) -> dict:
+        grade_scores = {
+            TaskGrade.HARD: 50,
+            TaskGrade.MEDIUM: 25,
+            TaskGrade.EASY: 10
+        }
+        
+        score = grade_scores.get(grade_data.grade, 0)
+        
+        if grade_data.completion_status == TaskCompletionStatus.PARTIAL:
+            score /= 2
+        elif grade_data.completion_status == TaskCompletionStatus.NOT_COMPLETED:
+            score = 0
+
+        status_enum = TaskCompletionStatus(grade_data.completion_status)
+
+        task = await self.grading_repository.update_task_grade(task_id, status_enum, score)
+        return {
+            "id": task.id,
+            "completion_status": task.completion_status,
+            "score": task.score,
+        }
+
+    async def get_grading_settings(self, project_id: int) -> dict:
+        settings = await self.grading_repository.get_grading_settings(project_id)
+        if not settings:
+            return None
+        return {
+            "required_easy_tasks": settings.required_easy_tasks,
+            "required_medium_tasks": settings.required_medium_tasks,
+            "required_hard_tasks": settings.required_hard_tasks
+        }
+
+    async def save_grading_settings(self, project_id: int, settings: ProjectGradingSettings) -> None:
+        await self.grading_repository.save_grading_settings(project_id, settings.dict())

@@ -1,5 +1,5 @@
 from datetime import datetime, date
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, validator
 from typing import Optional
 
 class TaskBase(BaseModel):
@@ -10,6 +10,8 @@ class TaskBase(BaseModel):
     grade: Optional[str] = Field("medium", max_length=10)  # easy, medium, hard
     column_id: Optional[int] = None
     start_date: Optional[datetime] = None
+    completion_status: Optional[str] = Field(None, max_length=20) 
+    score: Optional[float] = None
 
     due_date: datetime | None = None
 
@@ -28,6 +30,12 @@ class TaskUpdate(BaseModel):
     start_date: Optional[datetime] = None
     sprint_id: Optional[int] = None
     assignee_id: Optional[int] = None
+    completion_status: Optional[str] = Field(None, max_length=20) 
+    score: Optional[float] = None
+
+    @validator("completion_status")
+    def validate_status(cls, v):
+        return v.lower()
 
     model_config = {"from_attributes": True}
 
@@ -41,6 +49,8 @@ class TaskResponse(TaskBase):
     assignee_name: Optional[str] = None
     column_name: Optional[str] = None
     feedback: Optional[str] = None
+    completion_status: Optional[str] = Field(None, max_length=20) 
+    score: Optional[float] = None
     
     model_config = {"from_attributes": True}
 
@@ -69,4 +79,13 @@ class TaskRelationResponse(TaskRelationBase):
     created_at: datetime
 
     model_config = {"from_attributes": True}
+
+class TaskGradeUpdate(BaseModel):
+    grade: Optional[str] = None
+    completion_status: str
+
+class ProjectGradingSettings(BaseModel):
+    required_easy_tasks: int
+    required_medium_tasks: int
+    required_hard_tasks: int
 

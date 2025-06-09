@@ -64,7 +64,8 @@ async def get_project_service(
 ) -> ProjectService:
     project_repo = ProjectRepository(session)
     column_repo = TaskColumnRepository(session)
-    return ProjectService(project_repo, notification_service, column_repo, storage_service)
+    user_repo = UserRepository(session)
+    return ProjectService(project_repo, notification_service, column_repo, storage_service, user_repo)
 
 async def get_sprint_service(
     session: AsyncSession = Depends(get_db)
@@ -108,8 +109,9 @@ def get_task_column_service(
     project_repo = ProjectRepository(session)
     return TaskColumnService(column_repo, project_repo)
 
-def get_grading_service(
-    session: AsyncSession = Depends(get_db)
+async def get_grading_service(
+    session: AsyncSession = Depends(get_db),
+    project_service: ProjectService = Depends(get_project_service)
 ) -> GradingService:
     grading_repo = GradingRepository(session)
     return GradingService(grading_repo)

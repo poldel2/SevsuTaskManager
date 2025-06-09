@@ -10,6 +10,7 @@ class ProjectBase(BaseModel):
     logo: str | None = None
     start_date: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
     end_date: datetime | None = None
+    is_private: bool = False
 
 class ProjectCreate(ProjectBase):
     pass
